@@ -13,7 +13,7 @@ from bs4 import BeautifulSoup
 # implementations was ChatGPT (5.2 Thinking model). We note that we have not changed the function
 # documentation comments throughout the development process to ensure full visibility as to the
 # information provided to the GenAI for implementation; and that the AI was instructucted to not
-#  add any comments to the implementations, to enable us to perform this process and check over the AI generated code.
+# add any comments to the implementations, to enable us to perform this process and check over the AI generated code.
 
 
 # General guidance provided to the AI for all function implementation was as follows:
@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 # 2. All code should handle errors gracefully to prevent crashes.
 # 3. All code should be efficient, and concise as possible.
 # 4. All code should use the logger to print helpful log messsages that can be used in any debugging.
-# 5. Any added code should not be commented.
+# 5. Any added code should not be commented. (To allow for us to add comments ourselves).
 
 
 class Crawler:
@@ -39,7 +39,7 @@ class Crawler:
         # Maintain a set of hosts disallowed by robots.txt to avoid repeated robots.txt checks.
         self.disallowed_hosts = set()
 
-        # Politeness window enforces a time between concurrent requests to a host.
+        # The politeness window enforces a delay between requests to the same host.
         self.politeness_window = politeness_window
         self.crawl_limit = crawl_limit
         self.request_timeout = 10
@@ -47,10 +47,10 @@ class Crawler:
         # Keep track of the number of pages (successfully crawled).
         self.pages_crawled = 0
 
-        # Used to log into the console for easier debugging.
+        # Used to log to the console for easier debugging.
         self.logger = logger
 
-        # Add all seeds used to the frontier.
+        # Add all seed URLs to the frontier.
         for seed in seeds:
             self.add_url_to_frontier(seed)
 
@@ -59,43 +59,58 @@ class Crawler:
             makes use of the download_web_page and parse_web_page functions to perform the crawl. It ensures that concurrent 
             requests to the same host are spaced by the politeness_window; and that we don't crawl any more pages than the crawl_limit.
         """
+
+        # Continue crawling while the number of pages crawled is below the crawl limit.
         while self.pages_crawled < self.crawl_limit:
             crawled_this_scan = False
             shortest_wait = None
 
+            # Iterate through every host in the frontier.
             for hostname, host in list(self.frontier.items()):
+
+                # Check that the crawl limit has not been exceeded.
                 if self.pages_crawled >= self.crawl_limit:
                     break
 
+                # Ensure that the host has a queue.
                 if not host["queue"]:
                     continue
 
+                # Check when the host was last accessed by the crawler.
                 now = datetime.now()
                 last_accessed = host.get("last_accessed")
+                # If the host has been accessed before:
                 if last_accessed is not None:
+                    # Use the politeness window to calculate when the host can next be accessed.
                     next_allowed = last_accessed + \
                         timedelta(seconds=self.politeness_window)
+                    # If still within the politeness window, set a wait time for the next iteration.
                     if now < next_allowed:
                         wait_time = (next_allowed - now).total_seconds()
                         shortest_wait = wait_time if shortest_wait is None else min(
                             shortest_wait, wait_time)
                         continue
 
+                # Crawl the web page.
                 self.logger.info(f"Crawling host: {hostname}")
                 web_page = self.download_web_page(host)
                 crawled_this_scan = True
 
+                # If the web page was crawled successfully, increment the page count.
                 if web_page is not None:
                     self.pages_crawled += 1
                     self.parse_web_page(web_page)
 
+            # Frontier is empty. Log a message and break the loop.
             if not any(host["queue"] for host in self.frontier.values()):
                 self.logger.info("Crawler frontier is empty. Crawl complete.")
                 break
 
+            # If nothing was crawled in this scan, wait briefly to avoid busy idling.
             if not crawled_this_scan:
                 sleep(max(0.1, shortest_wait or 0.1))
 
+        # Log the total number of pages crawled during execution.
         self.logger.info(
             f"Crawl complete. Pages crawled: {self.pages_crawled}")
 
@@ -109,17 +124,22 @@ class Crawler:
             Returns:
                 requests.Response: The downloaded web page.
         """
+
+        # Ensure that the host object and its queue are valid.
         if host is None or not host.get("queue"):
             self.logger.warning("No URL available to download for host.")
             return None
 
+        # Pop the first URL from the host queue.
         url = host["queue"].popleft()
 
         try:
             self.logger.info(f"Downloading URL: {url}")
+            # Attempt to download the page. We identify ourselves as a crawler.
             response = requests.get(url, timeout=self.request_timeout, headers={
                                     "User-Agent": "COMP3011Crawler/1.0"})
             host["last_accessed"] = datetime.now()
+            # Raise an error on a failed download so control passes to the exception handler.
             response.raise_for_status()
             return response
         except requests.RequestException as error:
@@ -134,20 +154,25 @@ class Crawler:
             Args:
                 web_page (requests.Response): The downloaded web page to parse.
         """
+
+        # Check that web_page is not None.
         if web_page is None:
             self.logger.warning("No web page supplied for parsing.")
             return
 
+        # Check that the web page has an HTML content type.
         content_type = web_page.headers.get("Content-Type", "")
         if "html" not in content_type.lower():
             self.logger.info(f"Skipping non-HTML content: {web_page.url}")
             return
 
         try:
+            # Parse the page and extract links.
             soup = BeautifulSoup(web_page.text, "html.parser")
             links_added = 0
 
             for link in soup.find_all("a", href=True):
+                # Resolve the link against the current web page URL.
                 absolute_url = urljoin(web_page.url, link["href"])
                 before_count = len(self.crawled_urls)
                 self.add_url_to_frontier(absolute_url)
@@ -175,25 +200,31 @@ class Crawler:
 
         try:
             parsed_url = urlparse(url)
+            # Remove fragments from the URL, as they still refer to the same page.
             cleaned_url = parsed_url._replace(fragment="").geturl()
             hostname = parsed_url.hostname
 
+            # Ensure that this URL has not already been crawled.
             if cleaned_url in self.crawled_urls:
                 return
 
+            # Ensure that the URL is valid.
             if not validators.url(cleaned_url) or hostname is None:
                 self.logger.warning(
                     f"Invalid URL not added to frontier: {url}")
                 return
 
+            # Check whether the host has already been marked as disallowed.
             if hostname in self.disallowed_hosts:
                 return
 
+            # Attempt to add the host to the frontier.
             if hostname not in self.frontier and not self.add_host_to_frontier(hostname):
                 self.logger.info(f"Host not added to frontier: {hostname}")
                 return
 
             self.frontier[hostname]["queue"].append(cleaned_url)
+            # Add the URL to the crawled set to prevent it from being recrawled during this execution.
             self.crawled_urls.add(cleaned_url)
             self.logger.info(f"Added URL to frontier: {cleaned_url}")
         except Exception as error:
@@ -213,6 +244,7 @@ class Crawler:
 
         if hostname is not None and hostname not in self.frontier:
             try:
+                # Request the robots.txt file from the host.
                 robots_url = f"https://{hostname}/robots.txt"
                 robots_response = requests.get(
                     robots_url,
@@ -221,11 +253,14 @@ class Crawler:
                 )
                 robots_response.raise_for_status()
 
+                # Parse the robots.txt file.
                 robots_parser = RobotFileParser()
                 robots_parser.set_url(robots_url)
                 robots_parser.parse(robots_response.text.splitlines())
 
+                # Check that this crawler is allowed to fetch the web page.
                 if not robots_parser.can_fetch("COMP3011Crawler/1.0", f"https://{hostname}/"):
+                    # If not, cache the host as disallowed to avoid refetching robots.txt.
                     self.disallowed_hosts.add(hostname)
                     self.logger.info(
                         f"Crawling disallowed by robots.txt for host: {hostname}")
@@ -234,7 +269,7 @@ class Crawler:
                 self.logger.warning(
                     f"Could not read robots.txt for {hostname}; allowing host: {error}")
 
-            # Queue defined as collections.deque for more efficient FIFO operations.
+            # Use collections.deque for more efficient FIFO queue operations.
             self.frontier[hostname] = {"queue": deque(), "last_accessed": None}
             self.logger.info(f"Added host to frontier: {hostname}")
             return True

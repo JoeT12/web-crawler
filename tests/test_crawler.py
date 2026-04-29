@@ -60,14 +60,14 @@ def crawler(logger):
 
 
 def robots_response(text="User-agent: *\nAllow: /", error=None):
-    """Build and return a mock response for a `robots.txt` request.
+    """Build and return a mock response for a robots.txt request.
 
         Args:
-            text (str, optional): The mock response returned when requesting the `robots.txt`
+            text (str, optional): The mock response returned when requesting the robots.txt
                 file from the host.
-            error (any, optional): An error raised when requesting the `robots.txt` file.
+            error (any, optional): An error raised when requesting the robots.txt file.
         Returns:
-            FakeResponse: A mocked `robots.txt` response object from a host.
+            FakeResponse: A mocked robots.txt response object from a host.
     """
     return FakeResponse(url="https://example.com/robots.txt", text=text, error=error)
 
@@ -76,14 +76,14 @@ def test_init_adds_each_seed_through_frontier(monkeypatch, logger):
     """Ensure that the constructor adds each seed through the frontier logic.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             logger (logger): A mock logger object.
     """
 
     added = []
 
-    # Replace `add_url_to_frontier` so it adds URLs to the test list.
+    # Replace add_url_to_frontier so it adds URLs to the test list.
     monkeypatch.setattr(Crawler, "add_url_to_frontier",
                         lambda self, url: added.append(url))
 
@@ -99,19 +99,19 @@ def test_init_adds_each_seed_through_frontier(monkeypatch, logger):
 
 
 def test_add_host_allows_when_robots_allows(monkeypatch, crawler):
-    """Ensure that the crawler adds a host to the frontier when `robots.txt` permits crawling.
+    """Ensure that the crawler adds a host to the frontier when robots.txt permits crawling.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
 
-    # Mock a `robots.txt` response that permits crawling.
+    # Mock a robots.txt response that permits crawling.
     get = Mock(return_value=robots_response("User-agent: *\nAllow: /"))
     monkeypatch.setattr("crawler.requests.get", get)
 
-    # Assert that the crawler adds the host, using the mocked `robots.txt` file, to the frontier.
+    # Assert that the crawler adds the host, using the mocked robots.txt file, to the frontier.
     assert crawler.add_host_to_frontier("example.com") is True
     assert crawler.frontier["example.com"]["queue"] == deque()
     assert crawler.frontier["example.com"]["last_accessed"] is None
@@ -123,10 +123,10 @@ def test_add_host_allows_when_robots_allows(monkeypatch, crawler):
 
 
 def test_add_host_disallows_when_robots_blocks(monkeypatch, crawler):
-    """Ensure that the crawler does not add a host to the frontier when `robots.txt` blocks crawling.
+    """Ensure that the crawler does not add a host to the frontier when robots.txt blocks crawling.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -135,22 +135,22 @@ def test_add_host_disallows_when_robots_blocks(monkeypatch, crawler):
     monkeypatch.setattr("crawler.requests.get", Mock(
         return_value=robots_response("User-agent: *\nDisallow: /")))
 
-    # Assert that the host, using the mocked `robots.txt` file, is not added to the crawler frontier.
+    # Assert that the host, using the mocked robots.txt file, is not added to the crawler frontier.
     assert crawler.add_host_to_frontier("example.com") is False
     assert "example.com" not in crawler.frontier
     assert "example.com" in crawler.disallowed_hosts
 
 
 def test_add_host_allows_when_robots_unavailable(monkeypatch, crawler):
-    """Ensure that the crawler adds a host to the frontier when `robots.txt` is unavailable.
+    """Ensure that the crawler adds a host to the frontier when robots.txt is unavailable.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
 
-    # Mock an error while retrieving the `robots.txt` file from the host.
+    # Mock an error while retrieving the robots.txt file from the host.
     error = requests.RequestException("robots unavailable")
     monkeypatch.setattr("crawler.requests.get", Mock(
         return_value=robots_response(error=error)))
@@ -162,7 +162,7 @@ def test_add_host_allows_when_robots_unavailable(monkeypatch, crawler):
 
 
 def test_add_host_returns_false_for_none_or_existing(crawler):
-    """Ensure that `add_host_to_frontier` returns `False` for `None` or an existing host.
+    """Ensure that add_host_to_frontier returns False for None or an existing host.
 
         Args:
             crawler (Crawler): The instantiated Crawler object.
@@ -180,20 +180,20 @@ def test_add_url_adds_cleaned_url_to_existing_host(monkeypatch, crawler):
     """Ensure that the crawler adds a cleaned URL to the queue of an existing host.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
 
     # Mock an existing host on the frontier.
     crawler.frontier["example.com"] = {"queue": deque(), "last_accessed": None}
-    # Mock the URL validator to return `True`.
+    # Mock the URL validator to return True.
     monkeypatch.setattr("crawler.validators.url", Mock(return_value=True))
 
     # Call the function to add the URL to the frontier.
     crawler.add_url_to_frontier("https://example.com/path#section")
 
-    # Assert that the URL is added to the host queue and to the `crawled_urls` set.
+    # Assert that the URL is added to the host queue and to the crawled_urls set.
     assert list(crawler.frontier["example.com"]["queue"]) == [
         "https://example.com/path"]
     assert "https://example.com/path" in crawler.crawled_urls
@@ -203,7 +203,7 @@ def test_add_url_rejects_empty_duplicate_invalid_and_disallowed(monkeypatch, cra
     """Ensure that the crawler does not add empty, invalid, duplicate, or disallowed URLs to the frontier.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -228,10 +228,10 @@ def test_add_url_rejects_empty_duplicate_invalid_and_disallowed(monkeypatch, cra
 
 
 def test_add_url_adds_new_host_and_handles_host_rejection(monkeypatch, crawler):
-    """Ensure that the crawler adds new hosts through `add_url_to_frontier` and handles host rejection cleanly.
+    """Ensure that the crawler adds new hosts through add_url_to_frontier and handles host rejection cleanly.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -262,7 +262,7 @@ def test_add_url_logs_unexpected_errors(monkeypatch, crawler):
     """Ensure that the crawler logs unexpected errors while adding a URL to the frontier.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -278,13 +278,13 @@ def test_add_url_logs_unexpected_errors(monkeypatch, crawler):
 
 
 def test_download_web_page_returns_none_without_url(crawler):
-    """Ensure that `download_web_page` returns `None` when no valid URL input is supplied.
+    """Ensure that download_web_page returns None when no valid URL input is supplied.
 
         Args:
             crawler (Crawler): The instantiated Crawler object.
     """
 
-    # Assert that `download_web_page` returns `None` and that the logger recorded two warnings.
+    # Assert that download_web_page returns None and that the logger recorded two warnings.
     assert crawler.download_web_page(None) is None
     assert crawler.download_web_page(
         {"queue": deque(), "last_accessed": None}) is None
@@ -292,10 +292,10 @@ def test_download_web_page_returns_none_without_url(crawler):
 
 
 def test_download_web_page_success_updates_last_accessed(monkeypatch, crawler):
-    """Ensure that a successful download updates the host's `last_accessed` time in the frontier.
+    """Ensure that a successful download updates the host's last_accessed time in the frontier.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -307,7 +307,7 @@ def test_download_web_page_success_updates_last_accessed(monkeypatch, crawler):
             "last_accessed": None}
     monkeypatch.setattr("crawler.requests.get", get)
 
-    # Assert that the `last_accessed` time is updated.
+    # Assert that the last_accessed time is updated.
     assert crawler.download_web_page(host) is response
     assert host["queue"] == deque()
     assert isinstance(host["last_accessed"], datetime)
@@ -319,10 +319,10 @@ def test_download_web_page_success_updates_last_accessed(monkeypatch, crawler):
 
 
 def test_download_web_page_failure_updates_last_accessed_and_logs(monkeypatch, crawler):
-    """Ensure that a failed download still updates `last_accessed` and logs the error.
+    """Ensure that a failed download still updates last_accessed and logs the error.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -333,20 +333,20 @@ def test_download_web_page_failure_updates_last_accessed_and_logs(monkeypatch, c
             "last_accessed": None}
     monkeypatch.setattr("crawler.requests.get", Mock(side_effect=error))
 
-    # Assert that `last_accessed` was updated and that the logger recorded a warning.
+    # Assert that last_accessed was updated and that the logger recorded a warning.
     assert crawler.download_web_page(host) is None
     assert isinstance(host["last_accessed"], datetime)
     crawler.logger.warning.assert_called()
 
 
 def test_parse_web_page_handles_none_and_non_html(crawler):
-    """Ensure that `parse_web_page` handles `None` and non-HTML content gracefully.
+    """Ensure that parse_web_page handles None and non-HTML content gracefully.
 
         Args:
             crawler (Crawler): The instantiated Crawler object.
     """
 
-    # Call `parse_web_page` with invalid inputs.
+    # Call parse_web_page with invalid inputs.
     crawler.parse_web_page(None)
     crawler.parse_web_page(FakeResponse(
         url="https://example.com/file.pdf", content_type="application/pdf"))
@@ -362,7 +362,7 @@ def test_parse_web_page_adds_absolute_relative_and_fragment_links(monkeypatch, c
     """Ensure that the crawler adds relative, absolute, and fragment links to the frontier as separate paths.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -370,7 +370,7 @@ def test_parse_web_page_adds_absolute_relative_and_fragment_links(monkeypatch, c
     # Create a list to collect the URLs.
     added = []
 
-    # Mock the `add_url_to_frontier` function.
+    # Mock the add_url_to_frontier function.
     def record(url):
         added.append(url)
         crawler.crawled_urls.add(url)
@@ -405,7 +405,7 @@ def test_parse_web_page_catches_parser_errors(monkeypatch, crawler):
     """Ensure that the crawler handles errors encountered while parsing a web page for links.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -424,7 +424,7 @@ def test_crawl_downloads_parses_and_stops_when_frontier_empty(monkeypatch, crawl
     """Ensure that the crawler stops when no URLs remain in the frontier.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -455,7 +455,7 @@ def test_crawl_respects_crawl_limit(monkeypatch, crawler):
     """Ensure that the crawler respects the crawl limit.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -478,7 +478,7 @@ def test_crawl_does_not_count_failed_download(monkeypatch, crawler):
     """Ensure that failed downloads do not count toward the crawl limit.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -495,7 +495,7 @@ def test_crawl_does_not_count_failed_download(monkeypatch, crawler):
     parse = Mock()
     monkeypatch.setattr(crawler, "parse_web_page", parse)
 
-    # Start the crawl and assert that `pages_crawled` was not incremented by the failed download.
+    # Start the crawl and assert that pages_crawled was not incremented by the failed download.
     crawler.crawl()
     assert crawler.pages_crawled == 0
     parse.assert_not_called()
@@ -505,7 +505,7 @@ def test_crawl_waits_when_all_hosts_are_inside_politeness_window(monkeypatch, cr
     """Ensure that the crawler waits when all hosts in the frontier are within their politeness window.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
@@ -531,7 +531,7 @@ def test_crawl_empty_frontier_finishes_without_download(monkeypatch, crawler):
     """Ensure that the crawler does not attempt any downloads when the frontier is empty.
 
         Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A `MonkeyPatch` object used to modify
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
                 functions at runtime for mocking.
             crawler (Crawler): The instantiated Crawler object.
     """
