@@ -12,8 +12,8 @@ from bs4 import BeautifulSoup
 # detailed descriptions for implementation by a GenAI tool. The GenAI tool used to generate the
 # implementations was ChatGPT (5.2 Thinking model). We note that we have not changed the function
 # documentation comments throughout the development process to ensure full visibility as to the
-# information provided to the GenAI for implementation. We note that the AI was instructucted to not
-# add any comments to the implementations, to enable us to perform this process and check over the AI generated code.
+# information provided to the GenAI for implementation; and that the AI was instructucted to not
+#  add any comments to the implementations, to enable us to perform this process and check over the AI generated code.
 
 
 # General guidance provided to the AI for all function implementation was as follows:
@@ -21,7 +21,7 @@ from bs4 import BeautifulSoup
 # 2. All code should handle errors gracefully to prevent crashes.
 # 3. All code should be efficient, and concise as possible.
 # 4. All code should use the logger to print helpful log messsages that can be used in any debugging.
-# 5. Do not add any comments to the function.
+# 5. Any added code should not be commented.
 
 
 class Crawler:
@@ -73,10 +73,12 @@ class Crawler:
                 now = datetime.now()
                 last_accessed = host.get("last_accessed")
                 if last_accessed is not None:
-                    next_allowed = last_accessed + timedelta(seconds=self.politeness_window)
+                    next_allowed = last_accessed + \
+                        timedelta(seconds=self.politeness_window)
                     if now < next_allowed:
                         wait_time = (next_allowed - now).total_seconds()
-                        shortest_wait = wait_time if shortest_wait is None else min(shortest_wait, wait_time)
+                        shortest_wait = wait_time if shortest_wait is None else min(
+                            shortest_wait, wait_time)
                         continue
 
                 self.logger.info(f"Crawling host: {hostname}")
@@ -94,7 +96,8 @@ class Crawler:
             if not crawled_this_scan:
                 sleep(max(0.1, shortest_wait or 0.1))
 
-        self.logger.info(f"Crawl complete. Pages crawled: {self.pages_crawled}")
+        self.logger.info(
+            f"Crawl complete. Pages crawled: {self.pages_crawled}")
 
     def download_web_page(self, host):
         """ This function takes a host dictionary from the frontier, and pops the first web page from the host's queue before
@@ -114,7 +117,8 @@ class Crawler:
 
         try:
             self.logger.info(f"Downloading URL: {url}")
-            response = requests.get(url, timeout=self.request_timeout, headers={"User-Agent": "COMP3011Crawler/1.0"})
+            response = requests.get(url, timeout=self.request_timeout, headers={
+                                    "User-Agent": "COMP3011Crawler/1.0"})
             host["last_accessed"] = datetime.now()
             response.raise_for_status()
             return response
@@ -150,9 +154,11 @@ class Crawler:
                 if len(self.crawled_urls) > before_count:
                     links_added += 1
 
-            self.logger.info(f"Parsed {web_page.url}; added {links_added} link(s) to frontier.")
+            self.logger.info(
+                f"Parsed {web_page.url}; added {links_added} link(s) to frontier.")
         except Exception as error:
-            self.logger.warning(f"Failed to parse web page {getattr(web_page, 'url', 'unknown')}: {error}")
+            self.logger.warning(
+                f"Failed to parse web page {getattr(web_page, 'url', 'unknown')}: {error}")
 
     def add_url_to_frontier(self, url):
         """ This function attempts to add a URL to the crawler frontier. Before doing so, it validates the URL using 
@@ -176,7 +182,8 @@ class Crawler:
                 return
 
             if not validators.url(cleaned_url) or hostname is None:
-                self.logger.warning(f"Invalid URL not added to frontier: {url}")
+                self.logger.warning(
+                    f"Invalid URL not added to frontier: {url}")
                 return
 
             if hostname in self.disallowed_hosts:
@@ -190,7 +197,8 @@ class Crawler:
             self.crawled_urls.add(cleaned_url)
             self.logger.info(f"Added URL to frontier: {cleaned_url}")
         except Exception as error:
-            self.logger.warning(f"Failed to add URL to frontier {url}: {error}")
+            self.logger.warning(
+                f"Failed to add URL to frontier {url}: {error}")
 
     def add_host_to_frontier(self, hostname):
         """ This function attempts to add a host object to the crawler frontier. Before adding the host object to the frontier,
@@ -219,10 +227,12 @@ class Crawler:
 
                 if not robots_parser.can_fetch("COMP3011Crawler/1.0", f"https://{hostname}/"):
                     self.disallowed_hosts.add(hostname)
-                    self.logger.info(f"Crawling disallowed by robots.txt for host: {hostname}")
+                    self.logger.info(
+                        f"Crawling disallowed by robots.txt for host: {hostname}")
                     return False
             except requests.RequestException as error:
-                self.logger.warning(f"Could not read robots.txt for {hostname}; allowing host: {error}")
+                self.logger.warning(
+                    f"Could not read robots.txt for {hostname}; allowing host: {error}")
 
             # Queue defined as collections.deque for more efficient FIFO operations.
             self.frontier[hostname] = {"queue": deque(), "last_accessed": None}
