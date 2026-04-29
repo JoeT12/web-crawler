@@ -24,6 +24,7 @@ class Crawler:
         self.frontier = {}
 
         # Maintain a set of crawled URLs to prevent re-crawling the same URL during an execution.
+        # A set is used for efficient retrieval.
         self.crawled_urls = set()
 
         # Politeness window enforces a time between concurrent requests to a host.
@@ -40,7 +41,7 @@ class Crawler:
         for seed in seeds:
             self.add_url_to_frontier(seed)
 
-    def crawl():
+    def crawl(self):
         """ This function begins the crawling process. It continously scans the frontier for hosts that can be crawled, and 
             makes use of the download_web_page and parse_web_page functions to perform the crawl. It ensures that concurrent 
             requests to the same host are spaced by the politeness_window; and that we don't crawl any more pages than the crawl_limit.
