@@ -1,6 +1,5 @@
 import importlib
 import json
-import logging
 import re
 import sys
 from collections import defaultdict
@@ -34,6 +33,8 @@ Indexer = indexer_module.Indexer
 
 
 class DummyLogger:
+    """A mock logger."""
+
     def __init__(self):
         self.messages = defaultdict(list)
 
@@ -47,18 +48,28 @@ class DummyLogger:
         self.messages["error"].append(message)
 
 
+class StubStopWords:
+    """A structure containing stopwords."""
+
+    def words(self, _language):
+        return ["a", "and", "is", "of", "the", "to"]
+
+
 @pytest.fixture
 def logger():
+    """Instantiate a mock logger for injection into all tests."""
     return DummyLogger()
 
 
 @pytest.fixture
 def indexer(logger):
+    """Instantiate a mock Indexer for injection into all tests."""
     return Indexer(logger)
 
 
 @pytest.fixture
 def soup():
+    """Provide a BeautifulSoup-parsed dummy web page for injection into all tests."""
     return BeautifulSoup(
         """
         <html>
@@ -81,17 +92,33 @@ def soup():
 
 
 def test_init_starts_with_empty_index_and_document_map(logger):
+    """Ensure that the in-memory index and document map are empty when the Indexer is instantiated.
+
+        Args:
+            logger (logger): A mock logger for runtime logging.
+    """
+
     subject = Indexer(logger)
 
-    # Assert that
+    # Assert that both the in-memory index and the document map are empty.
     assert subject.index == {}
     assert subject.documents == {}
     assert subject.logger is logger
 
 
 def test_map_content_to_tag_families_extracts_all_supported_fields(indexer, soup):
+    """Ensure that, when asked to separate the document by tag families, the Indexer extracts all
+        expected tag families and content.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+            soup (BeautifulSoup): The parsed mock web page as a BeautifulSoup object.
+    """
+
+    # Pass the parsed mock web page to the indexer.
     result = indexer.map_content_to_tag_families(soup)
 
+    # Assert that the extracted fields and their content are as expected.
     assert result["title"] == ["Test Page"]
     assert result["headings"] == ["Main Heading", "Secondary Heading"]
     assert result["links"] == ["First Link"]
@@ -101,24 +128,49 @@ def test_map_content_to_tag_families_extracts_all_supported_fields(indexer, soup
 
 
 def test_map_content_to_tag_families_handles_missing_document(indexer):
+    """Ensure that, when asked to separate the document by tag families, the Indexer does not crash
+        if it is passed a None value.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    # Pass a None value to the function.
     result = indexer.map_content_to_tag_families(None)
 
+    # Assert that the Indexer logged a message and returned an empty dictionary.
     assert result == {"title": [], "headings": [],
                       "body": [], "links": [], "metadata": []}
     assert "parsed document is missing" in indexer.logger.messages["warning"][0]
 
 
 def test_map_content_to_tag_families_handles_documents_without_body(indexer):
+    """Ensure that, when asked to separate the document by tag families, the Indexer does not crash
+        if it is passed a document without an explicit body tag.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    # Mock HTML fragment with no body/header tags.
     parsed_fragment = BeautifulSoup(
         "<h1>Fragment Heading</h1><p>Fragment text</p>", "html.parser")
 
+    # Call the function and assert that all text in the mock document was parsed as the body.
     result = indexer.map_content_to_tag_families(parsed_fragment)
-
     assert result["headings"] == ["Fragment Heading"]
     assert result["body"] == ["Fragment Heading Fragment text"]
 
 
 def test_map_content_to_tag_families_logs_and_returns_defaults_on_parser_error(indexer):
+    """Ensure that, when asked to separate the document by tag families, the Indexer does not crash
+        if it is passed a document that results in a parser error.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    # A mock HTML document that fails during parsing.
     class BrokenDocument:
         title = None
         body = None
@@ -126,22 +178,22 @@ def test_map_content_to_tag_families_logs_and_returns_defaults_on_parser_error(i
         def find_all(self, *_args, **_kwargs):
             raise RuntimeError("broken parser")
 
+    # Call the function and assert that the error was logged and that an empty dictionary was returned.
     result = indexer.map_content_to_tag_families(BrokenDocument())
-
     assert result == {"title": [], "headings": [],
                       "body": [], "links": [], "metadata": []}
     assert "Failed to map tag families" in indexer.logger.messages["error"][0]
 
 
-class StubStopWords:
-    def words(self, _language):
-        return ["a", "and", "is", "of", "the", "to"]
-
-
 @pytest.fixture
 def deterministic_nltk(monkeypatch):
+    """Mock the behavior of the NLTK library for the following tests."""
+
+    # Any call to get stopwords should return a custom list.
     monkeypatch.setattr(indexer_module.nltk.corpus,
                         "stopwords", StubStopWords())
+
+    # Mock return values for the word_tokenize and pos_tag functions.
     monkeypatch.setattr(indexer_module.nltk, "word_tokenize",
                         lambda text: re.findall(r"[A-Za-z0-9'-]+", text))
     monkeypatch.setattr(indexer_module.nltk, "pos_tag", lambda words: [
@@ -149,14 +201,30 @@ def deterministic_nltk(monkeypatch):
 
 
 def test_tokenise_tag_content_returns_empty_list_for_empty_content(indexer):
+    """Ensure that, when asked to tokenise empty tag content, the Indexer does not crash
+        and returns an empty list.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
     assert indexer.tokenise_tag_content([]) == []
     assert indexer.tokenise_tag_content([None, "", "   "]) == []
 
 
 def test_tokenise_tag_content_filters_splits_stems_and_adds_ngrams(indexer, deterministic_nltk):
+    """Ensure that, when asked to tokenise tag content, the Indexer splits and stems words
+        and extracts n-grams as tokens.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+            deterministic_nltk (any): Applies monkeypatching before the test run for deterministic NLTK behavior.
+    """
+
+    # Call the function to tokenise with a mock list.
     tokens = indexer.tokenise_tag_content(
         ["Running state-of-the-art AI's a x robots 123!"])
 
+    # Assert that the words were stemmed and that n-grams were recognised.
     assert "run" in tokens
     assert "state" in tokens
     assert "art" in tokens
@@ -168,10 +236,21 @@ def test_tokenise_tag_content_filters_splits_stems_and_adds_ngrams(indexer, dete
     assert "run_state" in tokens
     assert "run_state_art" in tokens
     assert any(token.startswith("run_state_art") for token in tokens)
+    # Ensure that all runtime messages logged were of info severity.
     assert indexer.logger.messages["info"]
 
 
 def test_tokenise_tag_content_logs_and_returns_empty_list_on_nltk_error(indexer, monkeypatch):
+    """Ensure that, when asked to tokenise tag content, the Indexer returns an empty list if NLTK
+        raises an error.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
+    # Mock the NLTK stopwords function being "broken."
     class BrokenStopWords:
         def words(self, _language):
             raise LookupError("missing corpus")
@@ -179,11 +258,20 @@ def test_tokenise_tag_content_logs_and_returns_empty_list_on_nltk_error(indexer,
     monkeypatch.setattr(indexer_module.nltk.corpus,
                         "stopwords", BrokenStopWords())
 
+    # Assert that no tokens were returned and that an error message was logged.
     assert indexer.tokenise_tag_content(["content"]) == []
     assert "Failed to tokenise tag content" in indexer.logger.messages["error"][0]
 
 
 def test_build_postings_counts_positions_fields_and_weighted_scores(indexer):
+    """Ensure that, when asked to build postings, the Indexer correctly calculates the posting fields
+        and scores according to the implemented solution.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    # Ask the Indexer to build postings from some document features.
     result = indexer.build_postings(
         {
             "title": ["alpha", "beta", "alpha"],
@@ -195,6 +283,7 @@ def test_build_postings_counts_positions_fields_and_weighted_scores(indexer):
         }
     )
 
+    # Assert that the posting fields and scoring are correct.
     assert result["alpha"]["term_frequency"] == 3
     assert result["alpha"]["positions"] == [0, 2, 5]
     assert result["alpha"]["fields"] == ["links", "title"]
@@ -206,21 +295,46 @@ def test_build_postings_counts_positions_fields_and_weighted_scores(indexer):
 
 
 def test_build_postings_handles_empty_or_missing_tokens(indexer):
+    """Ensure that, when asked to build postings, the Indexer does not crash if passed a None value
+        or no tokens.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    # Assert that the Indexer returns an empty posting map.
     assert indexer.build_postings({}) == {}
     assert indexer.build_postings(None) == {}
     assert indexer.build_postings({"title": None, "body": []}) == {}
 
 
 def test_build_postings_logs_and_returns_empty_dict_on_error(indexer):
+    """Ensure that, when asked to build postings, the Indexer does not crash if tokenisation errors occur.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    # Mock a tokenisation error.
     class BrokenTokens:
         def items(self):
             raise RuntimeError("cannot iterate")
 
+    # Assert that no postings were created and that an error was logged at runtime.
     assert indexer.build_postings(BrokenTokens()) == {}
     assert "Failed to build postings" in indexer.logger.messages["error"][0]
 
 
 def test_index_page_indexes_new_urls_and_reuses_existing_document_ids(indexer, monkeypatch):
+    """Ensure that the Indexer can index both new documents and updated existing documents.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
+    # Mock the helper function return values.
     monkeypatch.setattr(indexer, "map_content_to_tag_families",
                         lambda _document: {"title": ["content"]})
     monkeypatch.setattr(indexer, "tokenise_tag_content",
@@ -232,10 +346,13 @@ def test_index_page_indexes_new_urls_and_reuses_existing_document_ids(indexer, m
                                    "positions": [0], "fields": ["title"], "score": 5.0}},
     )
 
+    # Call the indexing function.
     indexer.index_page("https://example.com/one", object())
     indexer.index_page("https://example.com/one", object())
     indexer.index_page("https://example.com/two", object())
 
+    # Assert that the Indexer created only two documents and that the information stored under the repeated document
+    # in the inverted index is still correct.
     assert indexer.documents == {
         1: "https://example.com/one", 2: "https://example.com/two"}
     assert sorted(indexer.index["alpha"].keys()) == ["1", "2"]
@@ -243,93 +360,153 @@ def test_index_page_indexes_new_urls_and_reuses_existing_document_ids(indexer, m
 
 
 def test_index_page_ignores_missing_inputs(indexer):
+    """Ensure that the Indexer does not crash if no inputs are passed to it.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
     indexer.index_page("", object())
     indexer.index_page("https://example.com", None)
 
+    # Assert that only warning messages were logged and that the inverted index and document map are empty.
     assert indexer.documents == {}
     assert indexer.index == {}
     assert len(indexer.logger.messages["warning"]) == 2
 
 
 def test_index_page_logs_errors_without_raising(indexer, monkeypatch):
+    """Ensure that if the Indexer encounters an error while indexing a page, it logs the error but does not raise it.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
+    # Mock an error.
     def raise_error(_document):
         raise RuntimeError("mapping failed")
 
+    # Mock a helper function used by the Indexer to raise the mocked error.
     monkeypatch.setattr(indexer, "map_content_to_tag_families", raise_error)
 
+    # Call the Indexer function and assert that no errors are raised and that the error is logged.
     indexer.index_page("https://example.com", object())
-
     assert indexer.documents == {1: "https://example.com"}
     assert indexer.index == {}
     assert "Failed to index URL" in indexer.logger.messages["error"][0]
 
 
 def test_save_index_writes_json_files_and_load_index_reads_them(tmp_path, logger, monkeypatch):
+    """Ensure that the Indexer saves and loads JSON files correctly.
+
+        Args:
+            tmp_path (str): A mock path.
+            logger (logger): A mock logger for runtime logging.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
+    # Set up a fake module directory for test data.
     fake_module_file = tmp_path / "src" / "indexer.py"
     fake_module_file.parent.mkdir()
     monkeypatch.setattr(indexer_module, "__file__", str(fake_module_file))
-
     subject = Indexer(logger)
     subject.documents = {1: "https://example.com"}
     subject.index = {"alpha": {"1": {"term_frequency": 1,
                                      "positions": [0], "fields": ["title"], "score": 5.0}}}
-
     subject.save_index()
 
+    # Assert that the data loaded from the JSON files into the Indexer is as expected.
     data_dir = tmp_path / "data"
     assert json.loads((data_dir / "documents.json").read_text(encoding="utf-8")
                       ) == {"1": "https://example.com"}
     assert json.loads(
         (data_dir / "index.json").read_text(encoding="utf-8")) == subject.index
-
     reloaded = Indexer(logger)
     reloaded.load_index()
-
     assert reloaded.documents == {"1": "https://example.com"}
     assert reloaded.index == subject.index
 
 
 def test_load_index_uses_empty_dicts_when_files_do_not_exist(tmp_path, logger, monkeypatch):
+    """Ensure that the Indexer uses empty dictionaries and does not crash when the files do not
+        exist.
+
+        Args:
+            tmp_path (str): A mock path.
+            logger (logger): A mock logger for runtime logging.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
+    # Set up a fake module directory for test data.
     fake_module_file = tmp_path / "src" / "indexer.py"
     fake_module_file.parent.mkdir()
     monkeypatch.setattr(indexer_module, "__file__", str(fake_module_file))
 
+    # Instantiate the Indexer and write some temporary data into its state.
     subject = Indexer(logger)
     subject.documents = {1: "stale"}
     subject.index = {"stale": {}}
 
+    # Assert that the Indexer state was reset after loading from an empty or non-existent file.
     subject.load_index()
-
     assert subject.documents == {}
     assert subject.index == {}
 
 
 def test_load_index_resets_state_when_json_is_invalid(tmp_path, logger, monkeypatch):
+    """Ensure that the Indexer uses empty dictionaries and does not crash when the JSON within the
+        data files is malformed.
+
+        Args:
+            tmp_path (str): A mock path.
+            logger (logger): A mock logger for runtime logging.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
+    # Set up a fake module directory.
     fake_module_file = tmp_path / "src" / "indexer.py"
     fake_module_file.parent.mkdir()
     monkeypatch.setattr(indexer_module, "__file__", str(fake_module_file))
     data_dir = tmp_path / "data"
     data_dir.mkdir()
+    # Write some malformed JSON into the test files.
     (data_dir /
      "documents.json").write_text("{not valid json", encoding="utf-8")
     (data_dir / "index.json").write_text('{"alpha": {}}', encoding="utf-8")
 
+    # Instantiate the Indexer and write some temporary data into its state.
     subject = Indexer(logger)
     subject.documents = {1: "stale"}
     subject.index = {"stale": {}}
 
+    # Assert that the malformed JSON was not loaded into the Indexer and that an error was logged.
     subject.load_index()
-
     assert subject.documents == {}
     assert subject.index == {}
     assert "Failed to load index" in logger.messages["error"][0]
 
 
 def test_save_index_logs_errors_without_raising(logger, monkeypatch):
+    """Ensure that, when asked to save index data, the Indexer logs errors but does not raise them.
+
+        Args:
+            logger (logger): A mock logger for runtime logging.
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+    """
+
+    # Mock an OS error during data saving.
     subject = Indexer(logger)
     monkeypatch.setattr(indexer_module.os, "makedirs", lambda *_args,
                         **_kwargs: (_ for _ in ()).throw(OSError("no permission")))
 
+    # Assert that errors were logged and that none were raised.
     subject.save_index()
-
     assert "Failed to save index" in logger.messages["error"][0]
