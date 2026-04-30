@@ -15,10 +15,14 @@ import json
 # 4. All code should use the logger to print helpful log messsages that can be used in any debugging.
 # 5. Any added code should not be commented. (To allow for us to add comments ourselves).
 
+
 class Indexer:
-    def __init__(self):
+    def __init__(self, logger):
         # Inverted index.
         self.index = {}
+
+        # Logger
+        self.logger = logger
 
         # A map of integers to URL's for the inverted index.
         self.documents = {}
@@ -33,7 +37,6 @@ class Indexer:
                 parsed_document (BeautifulSoup): The parsed web page.
         """
 
-    
     def map_content_to_tag_families(self, parsed_document):
         """ This function takes a document parsed with BeautifulSoup, and creates a map of the content corresponding to a particular tag
             family in the document. For example, if the document has multiple headings, all such heading should be stored as a list under
@@ -50,14 +53,18 @@ class Indexer:
         """ This function takes a list of content that was enclosed within a family of HTML tags for a particular document, and tokenises it into individual terms.
             It handles: small words, hyphens, apostrophes and stop words carefully, disposing of them if they offer no additional meaning to the surrounding terms. It
             also stems words to using the porter stemmer to improve searching efficiency within the index and reducing the number of forms needed to be stored in the index.
-            In addition, it should also detect phrases and n-grams using the part-of-speech tagging.
+            In addition, it should also detect phrases and n-grams using the part-of-speech tagging. It uses the NLTK Python to perform such functions wherever possible 
+            to prevent "re-inventing the wheel".
+
+            Reference:
+            - Reference NLTK for Tokenisation: Bird, Steven, Edward Loper and Ewan Klein (2009), Natural Language Processing with Python. O'Reilly Media Inc.
 
             Args:
                 tag_content (list): A map of HTML tag families to document contents.
 
             Returns:
                 list: A tokenised version of the list provided.
-        """        
+        """
 
     def build_postings(self, document_tokens):
         """ This function should build the postings for the inverted index. Each posting includes:
@@ -65,13 +72,13 @@ class Indexer:
             2. Term position in the document;
             3. Term fields (i.e., what family of HTML tags it can be found under in the document).
             4. Term score that combines all the previous information to calculate how relevant the term is to the document.
-        
+
             Args:
                 document_tokens (dict): A map of HTML tag families to tokenised document content.
 
             Returns:
                 dict: A map of postings.
-        """           
+        """
 
     def save_index(self):
         """ This function appends both the document map and inverted index map into the ../data directory as JSON files. It uses the json library 
@@ -81,4 +88,4 @@ class Indexer:
     def load_index(self):
         """ This function loads both the document map and inverted index map from the ../data directory into the indexer class instance variables. It uses
             the json library to achieve this.
-        """        
+        """
