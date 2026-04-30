@@ -44,17 +44,24 @@ class Indexer:
         """
         try:
             if not url or parsed_document is None:
-                self.logger.warning("Cannot index page because url or parsed document is missing")
+                self.logger.warning(
+                    "Cannot index page because url or parsed document is missing")
                 return
 
-            existing_document_ids = [int(document_id) for document_id, document_url in self.documents.items() if document_url == url]
-            document_id = existing_document_ids[0] if existing_document_ids else (max([int(key) for key in self.documents.keys()], default=0) + 1)
+            # Assign the document an id, add the assigned document id and url to the map of documents.
+            existing_document_ids = [int(
+                document_id) for document_id, document_url in self.documents.items() if document_url == url]
+            document_id = existing_document_ids[0] if existing_document_ids else (
+                max([int(key) for key in self.documents.keys()], default=0) + 1)
             self.documents[document_id] = url
 
+            # Get the postings of the document to add to the inverted index.
             tag_content = self.map_content_to_tag_families(parsed_document)
-            document_tokens = {family: self.tokenise_tag_content(content) for family, content in tag_content.items()}
+            document_tokens = {family: self.tokenise_tag_content(
+                content) for family, content in tag_content.items()}
             postings = self.build_postings(document_tokens)
 
+            #  Add the postings to the (in memory) inverted index.
             for term, posting in postings.items():
                 self.index.setdefault(term, {})[str(document_id)] = posting
 
@@ -73,14 +80,17 @@ class Indexer:
             Returns:
                 dict: A map of HTML tag families to document contents.
         """
-        tag_families = {"title": [], "headings": [], "body": [], "links": [], "metadata": []}
+        tag_families = {"title": [], "headings": [],
+                        "body": [], "links": [], "metadata": []}
         try:
             if parsed_document is None:
-                self.logger.warning("Cannot map tag families because parsed document is missing")
+                self.logger.warning(
+                    "Cannot map tag families because parsed document is missing")
                 return tag_families
 
             if getattr(parsed_document, "title", None) and parsed_document.title.string:
-                tag_families["title"].append(parsed_document.title.string.strip())
+                tag_families["title"].append(
+                    parsed_document.title.string.strip())
 
             for tag in parsed_document.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
                 text = tag.get_text(" ", strip=True)
@@ -97,8 +107,10 @@ class Indexer:
                 if content:
                     tag_families["metadata"].append(content.strip())
 
-            body = parsed_document.body if getattr(parsed_document, "body", None) else parsed_document
-            text = body.get_text(" ", strip=True) if hasattr(body, "get_text") else ""
+            body = parsed_document.body if getattr(
+                parsed_document, "body", None) else parsed_document
+            text = body.get_text(" ", strip=True) if hasattr(
+                body, "get_text") else ""
             if text:
                 tag_families["body"].append(text)
 
@@ -131,28 +143,42 @@ class Indexer:
             if not text:
                 return []
 
+            # Use NLTK to get the English stopwords, and tokenise the tag content.
             stop_words = set(nltk.corpus.stopwords.words("english"))
             raw_tokens = nltk.word_tokenize(text)
 
+            # Use NLTK stem the terms.
             stemmer = PorterStemmer()
             words = []
             for token in raw_tokens:
+                # Converts token to lowercase, splits on hyphens/apostrophes.
                 for part in re.split(r"[-']+", token.lower()):
+                    # Remove any character from the token that is not a lowercase character or digit.
                     part = re.sub(r"[^a-z0-9]", "", part)
+                    # If the token is not of length 1 and not in stop words, then stem it.
                     if len(part) > 1 and part not in stop_words:
                         words.append(stemmer.stem(part))
 
+            # Use NLTK to extract the phrases.
             phrases = []
             if words:
+                # Assigns each word to part of speech tag.
                 tagged = nltk.pos_tag(words)
+                # Defines a grammar rule called NP (noun phrase) for: 0+ adjectives. 1+ noun.
                 grammar = r"NP: {<JJ.*>*<NN.*>+}"
+                # Use the grammar to parse tagged words into a tree.
                 tree = nltk.RegexpParser(grammar).parse(tagged)
-                phrases = ["_".join(word for word, tag in subtree.leaves()) for subtree in tree.subtrees(lambda subtree: subtree.label() == "NP") if len(subtree.leaves()) > 1]
+                # keeps phrases with more than one word, joins words of a phrase with _.
+                phrases = ["_".join(word for word, tag in subtree.leaves()) for subtree in tree.subtrees(
+                    lambda subtree: subtree.label() == "NP") if len(subtree.leaves()) > 1]
 
+            # Constructs a final list of tokens.
             bigrams = ["_".join(ngram) for ngram in zip(words, words[1:])]
-            trigrams = ["_".join(ngram) for ngram in zip(words, words[1:], words[2:])]
+            trigrams = ["_".join(ngram)
+                        for ngram in zip(words, words[1:], words[2:])]
             tokens = words + phrases + bigrams + trigrams
-            self.logger.info(f"Tokenised tag content into {len(tokens)} tokens")
+            self.logger.info(
+                f"Tokenised tag content into {len(tokens)} tokens")
             return tokens
         except Exception as error:
             self.logger.error(f"Failed to tokenise tag content: {error}")
@@ -171,10 +197,17 @@ class Indexer:
             Returns:
                 dict: A map of postings.
         """
-        postings = defaultdict(lambda: {"term_frequency": 0, "positions": [], "fields": set(), "score": 0.0})
-        field_weights = {"title": 5.0, "headings": 4.0, "metadata": 3.0, "links": 2.0, "body": 1.0}
+
+        # Prepare an empty postings object.
+        postings = defaultdict(
+            lambda: {"term_frequency": 0, "positions": [], "fields": set(), "score": 0.0})
+        # Define weights to calculate the final score of each posting.
+        field_weights = {"title": 5.0, "headings": 4.0,
+                         "metadata": 3.0, "links": 2.0, "body": 1.0}
+
         try:
             position = 0
+            # Navigate through the field-token map, and create posting.
             for field, tokens in (document_tokens or {}).items():
                 weight = field_weights.get(field, 1.0)
                 for token in tokens or []:
@@ -185,7 +218,9 @@ class Indexer:
                     posting["score"] += weight / (1 + (position / 1000))
                     position += 1
 
-            result = {term: {"term_frequency": posting["term_frequency"], "positions": posting["positions"], "fields": sorted(posting["fields"]), "score": round(posting["score"], 6)} for term, posting in postings.items()}
+            # Merge the postings.
+            result = {term: {"term_frequency": posting["term_frequency"], "positions": posting["positions"], "fields": sorted(
+                posting["fields"]), "score": round(posting["score"], 6)} for term, posting in postings.items()}
             self.logger.info(f"Built postings for {len(result)} terms")
             return result
         except Exception as error:
@@ -197,16 +232,22 @@ class Indexer:
             to achieve this.
         """
         try:
-            data_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+            # Ensure the data directory exists. If not, create.
+            data_directory = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), "..", "data"))
             os.makedirs(data_directory, exist_ok=True)
 
+            # Append/write the (document-id:url) map to a file called documents.json.
             with open(os.path.join(data_directory, "documents.json"), "w", encoding="utf-8") as documents_file:
-                json.dump(self.documents, documents_file, ensure_ascii=False, indent=2)
+                json.dump(self.documents, documents_file,
+                          ensure_ascii=False, indent=2)
 
+            # Append/write the inverted index in memory to a file called index.json.
             with open(os.path.join(data_directory, "index.json"), "w", encoding="utf-8") as index_file:
                 json.dump(self.index, index_file, ensure_ascii=False, indent=2)
 
-            self.logger.info(f"Saved index and document map to {data_directory}")
+            self.logger.info(
+                f"Saved index and document map to {data_directory}")
         except Exception as error:
             self.logger.error(f"Failed to save index: {error}")
 
@@ -215,23 +256,27 @@ class Indexer:
             the json library to achieve this.
         """
         try:
-            data_directory = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "data"))
+            # Get the paths to the indexer files.
+            data_directory = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), "..", "data"))
             documents_path = os.path.join(data_directory, "documents.json")
             index_path = os.path.join(data_directory, "index.json")
 
+            # If both files exist, then read them into memory.
+            # Otherwise, initalise the indexer field variables as empty python dictionaries.
             if os.path.exists(documents_path):
                 with open(documents_path, "r", encoding="utf-8") as documents_file:
                     self.documents = json.load(documents_file)
             else:
                 self.documents = {}
-
             if os.path.exists(index_path):
                 with open(index_path, "r", encoding="utf-8") as index_file:
                     self.index = json.load(index_file)
             else:
                 self.index = {}
 
-            self.logger.info(f"Loaded index and document map from {data_directory}")
+            self.logger.info(
+                f"Loaded index and document map from {data_directory}")
         except Exception as error:
             self.logger.error(f"Failed to load index: {error}")
             self.documents = {}
