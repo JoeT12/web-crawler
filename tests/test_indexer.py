@@ -510,3 +510,119 @@ def test_save_index_logs_errors_without_raising(logger, monkeypatch):
     # Assert that errors were logged and that none were raised.
     subject.save_index()
     assert "Failed to save index" in logger.messages["error"][0]
+
+
+def test_get_inverted_index_returns_postings_for_existing_term(indexer):
+    """Ensure that the Indexer returns the postings for an existing term.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    indexer.index = {
+        "alpha": {
+            "1": {"term_frequency": 2, "positions": [0, 3], "fields": ["title"], "score": 9.0}
+        }
+    }
+
+    result = indexer.get_inverted_index("alpha")
+
+    assert result == indexer.index["alpha"]
+    assert "Retrieved 1 postings for term alpha" in indexer.logger.messages["info"][0]
+
+
+def test_get_inverted_index_returns_empty_dict_for_missing_or_empty_term(indexer):
+    """ Ensures that the Indexer handles missing and empty terms gracefully.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    indexer.index = {"alpha": {"1": {"term_frequency": 1}}}
+
+    assert indexer.get_inverted_index("beta") == {}
+    assert indexer.get_inverted_index("") == {}
+    assert "Retrieved 0 postings for term beta" in indexer.logger.messages["info"][0]
+    assert "term is missing" in indexer.logger.messages["warning"][0]
+
+
+def test_get_inverted_index_logs_and_returns_empty_dict_on_error(indexer):
+    """ Ensures that the Indexer logs and returns an empty dictionary if index lookup fails.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    #  Mock a broken Indexer.
+    class BrokenIndex:
+        def get(self, *_args, **_kwargs):
+            raise RuntimeError("cannot read index")
+
+    indexer.index = BrokenIndex()
+
+    #  Assert that when index cannot be ready, empty index is returned on index get request.
+    # and an error is logged.
+    assert indexer.get_inverted_index("alpha") == {}
+    assert "Failed to get inverted index for term alpha" in indexer.logger.messages[
+        "error"][0]
+
+
+def test_get_url_for_document_returns_url_for_int_and_string_document_ids(indexer):
+    """ Ensures that the Indexer returns URLs for both integer and string document ids.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    indexer.documents = {1: "https://example.com/one",
+                         "2": "https://example.com/two"}
+
+    assert indexer.get_url_for_document(1) == "https://example.com/one"
+    assert indexer.get_url_for_document("1") == "https://example.com/one"
+    assert indexer.get_url_for_document("2") == "https://example.com/two"
+
+
+def test_get_url_for_document_returns_none_for_missing_document_id(indexer):
+    """ Ensures that the Indexer returns None when a document id cannot be found.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    indexer.documents = {1: "https://example.com/one"}
+
+    assert indexer.get_url_for_document(999) is None
+    assert indexer.get_url_for_document("not-a-number") is None
+    # Assert that Indexer logs warning messages.
+    assert "No URL found for document 999" in indexer.logger.messages["warning"][0]
+    assert "No URL found for document not-a-number" in indexer.logger.messages["warning"][1]
+
+
+def test_get_url_for_document_handles_none_document_id(indexer):
+    """ Ensures that the Indexer handles a None document id gracefully.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    assert indexer.get_url_for_document(None) is None
+    assert "document id is missing" in indexer.logger.messages["warning"][0]
+
+
+def test_get_url_for_document_logs_and_returns_none_on_error(indexer):
+    """ Ensures that the Indexer logs and returns None if document lookup fails.
+
+        Args:
+            indexer (Indexer): The mock Indexer.
+    """
+
+    # Mock a broken document map that cannot be read by the indexer.
+    class BrokenDocuments:
+        def get(self, *_args, **_kwargs):
+            raise RuntimeError("cannot read documents")
+
+    indexer.documents = BrokenDocuments()
+
+    assert indexer.get_url_for_document(1) is None
+    # Assert Indexer logs error message.
+    assert "Failed to get URL for document 1" in indexer.logger.messages["error"][0]
