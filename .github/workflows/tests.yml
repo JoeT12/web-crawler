@@ -1,0 +1,50 @@
+# This file was written entirely by ChatGPT (5.5 Thinking Model).
+# The prompt provided to the GenAI to generate this was as follows:
+#   "Imagine you are an experienced software developer that has been tasked with implementing a 
+#   web crawler for an upcoming search engine company. You have been given management permissions on the 
+#   repository, and you plan to use GitHub actions to automate your tests and output a coverage report on 
+#   each push and pull request. Write the GitHub actions file to achieve this."
+
+name: Tests and Coverage
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Run tests and coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          fi
+
+          pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        run: |
+          pytest \
+            --cov=src \
+            --cov-report=term-missing \
+            --cov-report=xml \
+            --cov-fail-under=90
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
