@@ -27,6 +27,7 @@ class Search:
         # Logger.
         self.logger = logger
 
+        # Indexer
         self.indexer = indexer or Indexer(logger)
         if indexer is None:
             self.indexer.load_index()
@@ -52,21 +53,26 @@ class Search:
                 list: A list of web page URLs that match the search query.
         """
         try:
+            # Tokenise the search query.
             tokenised_query = self.tokenise_query(query)
             if not tokenised_query:
                 self.logger.warning(
                     "Cannot search because query produced no tokens")
                 return []
 
+            # Search index for matching postings.
             matching_postings = self.search_index(tokenised_query)
             if not matching_postings:
                 self.logger.info("No search results found")
                 return []
 
+            # Score the document postings in parallel.
+            # Maximum number of threads to be used will be 8.
             with ThreadPoolExecutor(max_workers=min(len(matching_postings), 8) or 1) as executor:
                 scored_documents = list(executor.map(lambda item: (item[0], self.score_document(
                     tokenised_query, item[1])), matching_postings.items()))
 
+            # Rank the documents using their TFIDF scores.
             ranked_documents = sorted(
                 scored_documents, key=lambda item: item[1], reverse=True)
             urls = []
@@ -98,6 +104,7 @@ class Search:
                 self.logger.warning(
                     "Cannot tokenise query because query is missing")
                 return []
+            # Use indexer tokeniser to tokenise the search query.
             tokens = self.indexer.tokenise_tag_content([query])
             self.logger.info(f"Tokenised query into {len(tokens)} tokens")
             return tokens
@@ -116,34 +123,42 @@ class Search:
                 dict: Postings within the inverted index that match the query tokens.
         """
         try:
+            # Validate query tokens.
             query_tokens = list(dict.fromkeys(query_token or []))
             if not query_tokens:
                 self.logger.warning(
                     "Cannot search index because query tokens are missing")
                 return {}
 
+            #  Get the inverted index for all query tokens. Done in parrallel using threads.
+            # Maximum number of threads is 8.
             with ThreadPoolExecutor(max_workers=min(len(query_tokens), 8) or 1) as executor:
                 term_indexes = list(executor.map(
                     self.indexer.get_inverted_index, query_tokens))
 
+            # Handle case where no postings are found for the query.
             if any(not term_index for term_index in term_indexes):
                 self.logger.info(
                     "No matching postings found for all query tokens")
                 return {}
 
+            # Sort the term indexes by their size.
             ordered_indexes = sorted(term_indexes, key=len)
+            # Sort each index by document id.
             matching_document_ids = sorted(
-                ordered_indexes[0].keys(), key=self._document_sort_key)
+                ordered_indexes[0].keys(), key=self.document_sort_key)
 
+            # Reduce documents to those that only contain EVERY query term.
             for term_index in ordered_indexes[1:]:
                 other_document_ids = sorted(
-                    term_index.keys(), key=self._document_sort_key)
-                matching_document_ids = self._intersect_document_ids(
+                    term_index.keys(), key=self.document_sort_key)
+                matching_document_ids = self.intersect_document_ids(
                     matching_document_ids, other_document_ids)
                 if not matching_document_ids:
                     self.logger.info("No documents matched all query tokens")
                     return {}
 
+            # Return a structure of all documents that contain all query tokens.
             results = {document_id: {}
                        for document_id in matching_document_ids}
             for token, term_index in zip(query_tokens, term_indexes):
@@ -157,43 +172,71 @@ class Search:
             self.logger.error(f"Failed to search index: {error}")
             return {}
 
-    def _intersect_document_ids(self, left_document_ids, right_document_ids):
+    def intersect_document_ids(self, left_document_ids, right_document_ids):
+        """ This function calculates the intersection of 2 document id lists.
+
+        Args:
+            left_document_ids (list): A list of document ids.
+            right_document_ids (list): Another list of document ids.
+
+        Returns:
+            list: The documents that are in both lists.
+        """
+
         try:
             matches = []
+            # Pointers for position in both document id lists.
             left_index = 0
             right_index = 0
+
+            # Skip pointers
             left_skip = int(len(left_document_ids) ** 0.5) or 1
             right_skip = int(len(right_document_ids) ** 0.5) or 1
 
+            # Iterate both pointers through the list until both reach the end.
             while left_index < len(left_document_ids) and right_index < len(right_document_ids):
                 left_id = left_document_ids[left_index]
                 right_id = right_document_ids[right_index]
-                left_key = self._document_sort_key(left_id)
-                right_key = self._document_sort_key(right_id)
+
+                # Convert document id's to comparable INT values.
+                left_key = self.document_sort_key(left_id)
+                right_key = self.document_sort_key(right_id)
 
                 if left_key == right_key:
+                    # If we have a match, append id to the matches.
                     matches.append(left_id)
                     left_index += 1
                     right_index += 1
                 elif left_key < right_key:
+                    # Use skip pointer for the left list.
                     next_left_index = left_index + left_skip
-                    if next_left_index < len(left_document_ids) and self._document_sort_key(left_document_ids[next_left_index]) <= right_key:
+                    if next_left_index < len(left_document_ids) and self.document_sort_key(left_document_ids[next_left_index]) <= right_key:
                         left_index = next_left_index
                     else:
                         left_index += 1
                 else:
+                    # Use skip pointer for the right list.
                     next_right_index = right_index + right_skip
-                    if next_right_index < len(right_document_ids) and self._document_sort_key(right_document_ids[next_right_index]) <= left_key:
+                    if next_right_index < len(right_document_ids) and self.document_sort_key(right_document_ids[next_right_index]) <= left_key:
                         right_index = next_right_index
                     else:
                         right_index += 1
 
+            # Return the intersection of the lists.
             return matches
         except Exception as error:
             self.logger.error(f"Failed to intersect document ids: {error}")
             return []
 
-    def _document_sort_key(self, document_id):
+    def document_sort_key(self, document_id):
+        """ This function returns the correct type for comparison/sort of document ids. 
+
+        Args:
+            document_id (int/str): The document id to convert format for.
+
+        Returns:
+            int/str: The int/string format of the document id.
+        """
         try:
             return int(document_id)
         except (TypeError, ValueError):
@@ -211,6 +254,8 @@ class Search:
             if not tokenised_query or not posting:
                 return 0.0
 
+            # Calculate total documents indexed.
+            # Prevents division by zero.
             total_documents = max(len(self.indexer.documents), 1)
             score = 0.0
 
@@ -219,6 +264,7 @@ class Search:
                 if not term_posting:
                     continue
 
+                # Score document based on TF/IDF and topical score (stored by the indexer).
                 document_frequency = max(
                     len(self.indexer.get_inverted_index(token)), 1)
                 inverse_document_frequency = math.log(
@@ -228,6 +274,7 @@ class Search:
                 score += (term_frequency *
                           inverse_document_frequency) + topical_score
 
+            # Returns score to 6 decimal places.
             return round(score, 6)
         except Exception as error:
             self.logger.error(f"Failed to score document: {error}")
