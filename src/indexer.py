@@ -69,6 +69,36 @@ class Indexer:
         except Exception as error:
             self.logger.error(f"Failed to index URL {url}: {error}")
 
+    def search_index(self, query_token):
+        """ This function searches the inverted index for postings that match ALL tokens in the query.
+            For efficiency, this function uses skip-pointers; alongside multithreading.
+
+            Args:
+                query_token (list): A list of search query tokens
+            Returns:
+                dict: Postings within the inverted index that match the query tokens.
+        """
+
+    def get_inverted_index(self, term):
+        """ This function returns the inverted index for a singular term.
+
+            Args:
+                word (str): A word to retrieve the inverted index postings for.
+
+            Returns:
+                dict: A list of inverted index postings for the term.
+        """
+
+    def get_url_for_document(self, document_id):
+        """ This function will return the URL of the document with a given id using the Indexer documents map.
+
+            Args:
+                document_id (int): The numeric id of the document.
+
+            Returns:
+                dict: The URL that corresponds to that document.
+        """
+
     def map_content_to_tag_families(self, parsed_document):
         """ This function takes a document parsed with BeautifulSoup, and creates a map of the content corresponding to a particular tag
             family in the document. For example, if the document has multiple headings, all such heading should be stored as a list under
