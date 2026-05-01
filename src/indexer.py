@@ -2,7 +2,6 @@ import json
 import os
 import re
 from collections import defaultdict
-
 import nltk
 from nltk.stem import PorterStemmer
 
@@ -78,6 +77,19 @@ class Indexer:
             Returns:
                 dict: A list of inverted index postings for the term.
         """
+        try:
+            if not term:
+                self.logger.warning(
+                    "Cannot get inverted index because term is missing")
+                return {}
+            postings = self.index.get(term, {})
+            self.logger.info(
+                f"Retrieved {len(postings)} postings for term {term}")
+            return postings
+        except Exception as error:
+            self.logger.error(
+                f"Failed to get inverted index for term {term}: {error}")
+            return {}
 
     def get_url_for_document(self, document_id):
         """ This function will return the URL of the document with a given id using the Indexer documents map.
@@ -88,6 +100,25 @@ class Indexer:
             Returns:
                 dict: The URL that corresponds to that document.
         """
+        try:
+            if document_id is None:
+                self.logger.warning(
+                    "Cannot get URL because document id is missing")
+                return None
+            url = self.documents.get(
+                document_id) or self.documents.get(str(document_id))
+            if not url:
+                try:
+                    url = self.documents.get(int(document_id))
+                except (TypeError, ValueError):
+                    url = None
+            if not url:
+                self.logger.warning(f"No URL found for document {document_id}")
+            return url
+        except Exception as error:
+            self.logger.error(
+                f"Failed to get URL for document {document_id}: {error}")
+            return None
 
     def map_content_to_tag_families(self, parsed_document):
         """ This function takes a document parsed with BeautifulSoup, and creates a map of the content corresponding to a particular tag
