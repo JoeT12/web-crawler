@@ -56,6 +56,17 @@ class Search:
                 list: A list of query tokens.
         """
 
+    def search_index(self, query_token):
+        """ This function searches the inverted index for postings that match ALL tokens in the query.
+            For efficiency, this function uses skip-pointers; alongside multithreading. It makes use of 
+            the getter function for the inverted index in the Indexer class.
+
+            Args:
+                query_token (list): A list of search query tokens
+            Returns:
+                dict: Postings within the inverted index that match the query tokens.
+        """
+
     def score_document(self, tokenised_query, posting):
         """ This function takes a posting for a document and assigns it a score based on it's relevance for the given query. 
             It uses the topical features of the document to create this score..

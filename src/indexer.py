@@ -69,16 +69,6 @@ class Indexer:
         except Exception as error:
             self.logger.error(f"Failed to index URL {url}: {error}")
 
-    def search_index(self, query_token):
-        """ This function searches the inverted index for postings that match ALL tokens in the query.
-            For efficiency, this function uses skip-pointers; alongside multithreading.
-
-            Args:
-                query_token (list): A list of search query tokens
-            Returns:
-                dict: Postings within the inverted index that match the query tokens.
-        """
-
     def get_inverted_index(self, term):
         """ This function returns the inverted index for a singular term.
 
