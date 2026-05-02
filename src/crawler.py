@@ -33,9 +33,9 @@ class Crawler:
         # The last accessed time of each host will store the time that a page was last downloaded/crawled from that host.
         self.frontier = {}
 
-        # Maintain a set of crawled URLs to prevent re-crawling the same URL during an execution.
+        # Maintain a set of seen URLs to prevent re-adding the same URL to the frontier during an execution.
         # A set is used for efficient retrieval.
-        self.crawled_urls = set()
+        self.seen_urls = set()
 
         # Maintain a set of hosts disallowed by robots.txt to avoid repeated robots.txt checks.
         self.disallowed_hosts = set()
@@ -185,9 +185,9 @@ class Crawler:
             for link in soup.find_all("a", href=True):
                 # Resolve the link against the current web page URL.
                 absolute_url = urljoin(web_page.url, link["href"])
-                before_count = len(self.crawled_urls)
+                before_count = len(self.seen_urls)
                 self.add_url_to_frontier(absolute_url)
-                if len(self.crawled_urls) > before_count:
+                if len(self.seen_urls) > before_count:
                     links_added += 1
 
             self.logger.info(
@@ -201,10 +201,10 @@ class Crawler:
 
     def add_url_to_frontier(self, url):
         """ This function attempts to add a URL to the crawler frontier. Before doing so, it validates the URL using 
-            the validators library and ensures that the URL isn't in the crawled_urls set. If the URL is valid, then
+            the validators library and ensures that the URL isn't in the seen_urls set. If the URL is valid, then
             it adds the URL to the corresponding host queue (if the host already exists in the frontier); or uses
             the add_host_to_frontier function to attempt to add the host to the frontier. In the scenario that the URL
-            is successfully added to the frontier, the URL should be added to the crawled_urls set. 
+            is successfully added to the frontier, the URL should be added to the seen_urls set. 
 
             Args:
                 url (str): The URL to add to the frontier.
@@ -218,8 +218,8 @@ class Crawler:
             cleaned_url = parsed_url._replace(fragment="").geturl()
             hostname = parsed_url.hostname
 
-            # Ensure that this URL has not already been crawled.
-            if cleaned_url in self.crawled_urls:
+            # Ensure that this URL has not already been seen.
+            if cleaned_url in self.seen_urls:
                 return
 
             # Ensure that the URL is valid.
@@ -238,8 +238,8 @@ class Crawler:
                 return
 
             self.frontier[hostname]["queue"].append(cleaned_url)
-            # Add the URL to the crawled set to prevent it from being recrawled during this execution.
-            self.crawled_urls.add(cleaned_url)
+            # Add the URL to the seen set to prevent it from being added to the frontier again during this execution.
+            self.seen_urls.add(cleaned_url)
             self.logger.info(f"Added URL to frontier: {cleaned_url}")
         except Exception as error:
             self.logger.warning(
