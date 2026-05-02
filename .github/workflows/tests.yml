@@ -5,7 +5,7 @@
 #   repository, and you plan to use GitHub actions to automate your tests and output a coverage report on 
 #   each push and pull request. Write the GitHub actions file to achieve this."
 
-name: Tests and Coverage
+name: Formatting, Tests, Coverage
 
 on:
   push:
@@ -34,6 +34,10 @@ jobs:
           fi
 
           pip install pytest pytest-cov
+      
+      - name: Format src code with pep8
+        run: |
+          autopep8 --in-place --recursive src/
 
       - name: Run tests with coverage
         run: |
