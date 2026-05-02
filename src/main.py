@@ -50,7 +50,7 @@ def main():
                 query = cmd[5:]
                 print(search.search_query(query))
             else:
-                logger.error(
+                print(
                     "You must load the index before executing the find command")
 
         # Perform a single term search when the print command is used.
@@ -59,8 +59,8 @@ def main():
                 term = cmd[6:]
                 print(search.search_term(term))
             else:
-                logger.error(
-                    "You must load the index before executing the find command")
+                print(
+                    "You must load the index before executing the print command")
 
 
 # Only call main if this file is directly invoked.

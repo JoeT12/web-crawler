@@ -99,13 +99,20 @@ class Search:
                 dict: The inverted index postings for a term.
         """
 
-        # Tokenise the term, and return it's inverted index.
+        # Check term has been passed correctly.
         if term is None or len(term) == 0:
-             self.logger.warning(
+            self.logger.warning(
                 f"No term provided to search_term function")
-             return
+            return {}
 
+        # Tokenise the term.
         tokens = self.indexer.tokenise_tag_content([term])
+        if len(tokens) == 0:
+            self.logger.warning(
+                f"The term {term} provided had no tokens")
+            return {}
+
+        # Return the inverted index for the token.
         postings = self.indexer.get_inverted_index(tokens[0])
         if len(postings) == 0:
             self.logger.info(
