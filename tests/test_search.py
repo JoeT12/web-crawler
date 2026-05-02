@@ -196,6 +196,94 @@ def test_tokenise_query_handles_indexer_errors(logger):
     assert logger.messages[-1][0] == "error"
 
 
+def test_constructor_uses_default_indexer_when_none_is_supplied(monkeypatch, logger):
+    """ Ensures that the Search constructor creates its own Indexer when one is not supplied.
+
+        Args:
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+            logger (logger): A mock logger object.
+    """
+
+    created = {}
+
+    class LoadingIndexer:
+        def __init__(self, received_logger):
+            created["logger"] = received_logger
+
+    monkeypatch.setattr("search.Indexer", LoadingIndexer)
+    searcher = Search(logger)
+
+    # Assert that the Search class created its own Indexer.
+    assert searcher.indexer.__class__ is LoadingIndexer
+    assert created == {"logger": logger}
+
+
+def test_search_term_returns_postings_for_valid_term(logger):
+    """ Ensures that the search_term function returns postings for a valid term.
+
+        Args:
+            logger (logger): A mock logger object.
+    """
+
+    indexer = FakeIndexer(
+        inverted_index={"alpha": {1: {"term_frequency": 1, "score": 0.0}}},
+        tokens=["alpha"],
+    )
+    searcher = Search(logger, indexer=indexer)
+
+    # Assert that the postings for the tokenised term were returned.
+    assert searcher.search_term("Alpha") == {
+        1: {"term_frequency": 1, "score": 0.0}
+    }
+
+
+@pytest.mark.parametrize("term", [None, ""])
+def test_search_term_rejects_missing_terms(term, logger):
+    """ Ensures that the search_term function rejects missing search terms.
+
+        Args:
+            term (str): The term to search for.
+            logger (logger): A mock logger object.
+    """
+
+    searcher = Search(logger, indexer=FakeIndexer())
+
+    # Assert that the function returned an empty dictionary and logged a warning.
+    assert searcher.search_term(term) == {}
+    assert logger.messages[-1][0] == "warning"
+
+
+def test_search_term_returns_empty_when_tokenisation_produces_no_tokens(logger):
+    """ Ensures that the search_term function returns an empty dictionary when term tokenisation
+        produces no tokens.
+
+        Args:
+            logger (logger): A mock logger object.
+    """
+
+    searcher = Search(logger, indexer=FakeIndexer(tokens=[]))
+
+    # Assert that the function returned an empty dictionary and logged a warning.
+    assert searcher.search_term("!!!") == {}
+    assert logger.messages[-1][0] == "warning"
+
+
+def test_search_term_returns_empty_when_no_postings_exist(logger):
+    """ Ensures that the search_term function returns an empty dictionary when no postings exist
+        for the tokenised term.
+
+        Args:
+            logger (logger): A mock logger object.
+    """
+
+    searcher = Search(logger, indexer=FakeIndexer(tokens=["missing"]))
+
+    # Assert that the function returned an empty dictionary and logged an info message.
+    assert searcher.search_term("missing") == {}
+    assert logger.messages[-1][0] == "info"
+
+
 def test_search_index_returns_documents_containing_all_unique_query_tokens(logger, populated_indexer):
     """ Ensures that the search_index function of the Search module returns documents containing all of the
         provided terms in the query. 
