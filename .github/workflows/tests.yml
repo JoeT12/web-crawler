@@ -35,9 +35,9 @@ jobs:
 
           pip install pytest pytest-cov
       
-      - name: Format src code with pep8
+      - name: Run pep8 formatting validation
         run: |
-          autopep8 --in-place --recursive src/
+          test -z "$(autopep8 --diff --recursive src/)"
 
       - name: Run tests with coverage
         run: |
