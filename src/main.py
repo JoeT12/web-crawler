@@ -22,6 +22,9 @@ def main():
                       crawl_limit=250, indexer=indx)
     search = Search(logger=logger, indexer=indx)
 
+    # Keep track of whether the index is loaded or not to prevent errors.
+    loaded_index = False
+
     # 'Shell'.
     while True:
         # Get the command from the standard input.
@@ -34,20 +37,30 @@ def main():
         # Start the crawl when build command used.
         if cmd == "build":
             crawler.crawl()
+            loaded_index = True
 
         # Load the index when the load command is used.
         if cmd == "load":
             indx.load_index()
+            loaded_index = True
 
         # Perform a query search when the find command is used.
         if cmd.startswith("find "):
-            query = cmd[5:]
-            print(search.search_query(query))
+            if loaded_index:
+                query = cmd[5:]
+                print(search.search_query(query))
+            else:
+                logger.error(
+                    "You must load the index before executing the find command")
 
         # Perform a single term search when the print command is used.
         if cmd.startswith("print "):
-            term = cmd[6:]
-            print(search.search_term(term))
+            if loaded_index:
+                term = cmd[6:]
+                print(search.search_term(term))
+            else:
+                logger.error(
+                    "You must load the index before executing the find command")
 
 
 # Only call main if this file is directly invoked.

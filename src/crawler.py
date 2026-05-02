@@ -104,8 +104,8 @@ class Crawler:
 
                 # If the web page was crawled successfully, increment the page count.
                 if web_page is not None:
-                    self.pages_crawled += 1
                     self.parse_web_page(web_page)
+                    self.pages_crawled += 1
 
             # Frontier is empty. Log a message and break the loop.
             if not any(host["queue"] for host in self.frontier.values()):

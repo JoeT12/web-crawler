@@ -141,37 +141,6 @@ def populated_indexer():
     )
 
 
-def test_constructor_loads_index_when_no_indexer_is_supplied(monkeypatch, logger):
-    """ Ensures that the constructor automatically loads the Indexer if no index is explicitly
-        supplied.
-
-        Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
-                functions at runtime for mocking.
-            logger (logger): A mock logger object.
-    """
-
-    created = {}
-
-    class LoadingIndexer:
-        # Mock a loading indexer.
-        documents = {}
-
-        def __init__(self, received_logger):
-            created["logger"] = received_logger
-            created["loaded"] = False
-
-        def load_index(self):
-            created["loaded"] = True
-
-    monkeypatch.setattr("search.Indexer", LoadingIndexer)
-    searcher = Search(logger)
-
-    # Assert that the Search class has loaded its own indexer.
-    assert searcher.indexer.__class__ is LoadingIndexer
-    assert created == {"logger": logger, "loaded": True}
-
-
 def test_tokenise_query_returns_tokens_from_indexer(logger):
     """ Ensures that when asked to tokenise a query, the Search module successfully tokenises
         the query.

@@ -29,8 +29,6 @@ class Search:
 
         # Indexer
         self.indexer = indexer or Indexer(logger)
-        if indexer is None:
-            self.indexer.load_index()
 
     # ---------------------- Public Functions ----------------------
 
@@ -101,7 +99,12 @@ class Search:
                 dict: The inverted index postings for a term.
         """
 
-        #  Tokenise the term, and return it's inverted index.
+        # Tokenise the term, and return it's inverted index.
+        if term is None or len(term) == 0:
+             self.logger.warning(
+                f"No term provided to search_term function")
+             return
+
         tokens = self.indexer.tokenise_tag_content([term])
         postings = self.indexer.get_inverted_index(tokens[0])
         if len(postings) == 0:
