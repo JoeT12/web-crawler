@@ -1,4 +1,4 @@
-# Web Crawler
+# Web Crawler
 This repository contains a web crawler application that was developed as part of the `COMP3011 Web Services and Web Data` course at the University of Leeds. It allows the automated crawling of pages on the web to enable search engine functionality that is accessed via a shell.
 
 ## Setup Instructions
