@@ -117,7 +117,7 @@ class Crawler:
         # Log the total number of pages crawled during execution.
         self.logger.info(
             f"Crawl complete. Pages crawled: {self.pages_crawled}")
-        
+
         # Save the index once the crawl is complete.
         self.indexer.save_index()
 
