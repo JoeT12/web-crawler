@@ -17,7 +17,7 @@ def main():
     logger = logging.getLogger(__name__)
 
     # Module initalisations.
-    crawer = Crawler(seeds=initial_seeds, logger=logger, crawl_limit=10000)
+    crawler = Crawler(seeds=initial_seeds, logger=logger, crawl_limit=250)
     indx = Indexer(logger=logger)
     search = Search(logger=logger, indexer=indx)
 
@@ -32,7 +32,7 @@ def main():
 
         # Start the crawl when build command used.
         if cmd == "build":
-            crawer.crawl()
+            crawler.crawl()
 
         # Load the index when the load command is used.
         if cmd == "load":
