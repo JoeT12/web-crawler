@@ -397,7 +397,7 @@ def test_parse_web_page_adds_absolute_relative_and_fragment_links(monkeypatch, c
         "https://example.com/base/relative",
         "https://example.com/base/index.html#local",
     ]
-    crawler.logger.info.assert_called_with(
+    crawler.logger.info.assert_any_call(
         "Parsed https://example.com/base/index.html; added 3 link(s) to frontier.")
 
 

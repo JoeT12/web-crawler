@@ -32,6 +32,11 @@ class Indexer:
         # A map of integers to URL's for the inverted index.
         self.documents = {}
 
+        #  NTLK dataset downloads required by Indexer.
+        nltk.download('stopwords')
+        nltk.download('punkt')
+        nltk.download('averaged_perceptron_tagger')
+
     def index_page(self, url, parsed_document):
         """ This function makes use of the helper functions: map_content_to_tag_families, tokenise_tag_content and build_postings to
             append postings to the in-memory inverted index. The document is identified in the inverted index by a document id, which

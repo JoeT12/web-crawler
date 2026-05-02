@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from time import sleep
 from urllib.parse import urljoin, urlparse
 from urllib.robotparser import RobotFileParser
+from indexer import Indexer
 
 import requests
 import validators
@@ -49,6 +50,9 @@ class Crawler:
 
         # Used to log to the console for easier debugging.
         self.logger = logger
+
+        # Indexer.
+        self.indexer = Indexer(logger=logger)
 
         # Add all seed URLs to the frontier.
         for seed in seeds:
@@ -113,6 +117,9 @@ class Crawler:
         # Log the total number of pages crawled during execution.
         self.logger.info(
             f"Crawl complete. Pages crawled: {self.pages_crawled}")
+
+        # Save the index once the crawl is complete.
+        self.indexer.save_index()
 
     def download_web_page(self, host):
         """ This function takes a host dictionary from the frontier, and pops the first web page from the host's queue before
@@ -181,6 +188,9 @@ class Crawler:
 
             self.logger.info(
                 f"Parsed {web_page.url}; added {links_added} link(s) to frontier.")
+
+            # Pass the page to the Indexer to be indexed.
+            self.indexer.index_page(web_page.url, soup)
         except Exception as error:
             self.logger.warning(
                 f"Failed to parse web page {getattr(web_page, 'url', 'unknown')}: {error}")
