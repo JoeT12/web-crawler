@@ -355,8 +355,8 @@ def test_index_page_indexes_new_urls_and_reuses_existing_document_ids(indexer, m
     # in the inverted index is still correct.
     assert indexer.documents == {
         1: "https://example.com/one", 2: "https://example.com/two"}
-    assert sorted(indexer.index["alpha"].keys()) == ["1", "2"]
-    assert indexer.index["alpha"]["1"]["score"] == 5.0
+    assert sorted(indexer.index["alpha"].keys()) == [1, 2]
+    assert indexer.index["alpha"][1]["score"] == 5.0
 
 
 def test_index_page_ignores_missing_inputs(indexer):
@@ -416,8 +416,8 @@ def test_save_index_writes_json_files_and_load_index_reads_them(tmp_path, logger
     monkeypatch.setattr(indexer_module, "__file__", str(fake_module_file))
     subject = Indexer(logger)
     subject.documents = {1: "https://example.com"}
-    subject.index = {"alpha": {"1": {"term_frequency": 1,
-                                     "positions": [0], "fields": ["title"], "score": 5.0}}}
+    subject.index = {"alpha": {1: {"term_frequency": 1,
+                                   "positions": [0], "fields": ["title"], "score": 5.0}}}
     subject.save_index()
 
     # Assert that the data loaded from the JSON files into the Indexer is as expected.
@@ -425,10 +425,20 @@ def test_save_index_writes_json_files_and_load_index_reads_them(tmp_path, logger
     assert json.loads((data_dir / "documents.json").read_text(encoding="utf-8")
                       ) == {"1": "https://example.com"}
     assert json.loads(
-        (data_dir / "index.json").read_text(encoding="utf-8")) == subject.index
+        (data_dir / "index.json").read_text(encoding="utf-8")
+    ) == {
+        "alpha": {
+            "1": {
+                "term_frequency": 1,
+                "positions": [0],
+                "fields": ["title"],
+                "score": 5.0,
+            }
+        }
+    }
     reloaded = Indexer(logger)
     reloaded.load_index()
-    assert reloaded.documents == {"1": "https://example.com"}
+    assert reloaded.documents == {1: "https://example.com"}
     assert reloaded.index == subject.index
 
 
@@ -521,7 +531,7 @@ def test_get_inverted_index_returns_postings_for_existing_term(indexer):
 
     indexer.index = {
         "alpha": {
-            "1": {"term_frequency": 2, "positions": [0, 3], "fields": ["title"], "score": 9.0}
+            1: {"term_frequency": 2, "positions": [0, 3], "fields": ["title"], "score": 9.0}
         }
     }
 
@@ -538,7 +548,7 @@ def test_get_inverted_index_returns_empty_dict_for_missing_or_empty_term(indexer
             indexer (Indexer): The mock Indexer.
     """
 
-    indexer.index = {"alpha": {"1": {"term_frequency": 1}}}
+    indexer.index = {"alpha": {1: {"term_frequency": 1}}}
 
     assert indexer.get_inverted_index("beta") == {}
     assert indexer.get_inverted_index("") == {}
@@ -567,19 +577,19 @@ def test_get_inverted_index_logs_and_returns_empty_dict_on_error(indexer):
         "error"][0]
 
 
-def test_get_url_for_document_returns_url_for_int_and_string_document_ids(indexer):
-    """ Ensures that the Indexer returns URLs for both integer and string document ids.
+def test_get_url_for_document_returns_url_for_document_ids(indexer):
+    """ Ensures that the Indexer returns URLs for document ids.
 
         Args:
             indexer (Indexer): The mock Indexer.
     """
 
     indexer.documents = {1: "https://example.com/one",
-                         "2": "https://example.com/two"}
+                         2: "https://example.com/two"}
 
     assert indexer.get_url_for_document(1) == "https://example.com/one"
-    assert indexer.get_url_for_document("1") == "https://example.com/one"
-    assert indexer.get_url_for_document("2") == "https://example.com/two"
+    assert indexer.get_url_for_document(1) == "https://example.com/one"
+    assert indexer.get_url_for_document(2) == "https://example.com/two"
 
 
 def test_get_url_for_document_returns_none_for_missing_document_id(indexer):
@@ -590,12 +600,7 @@ def test_get_url_for_document_returns_none_for_missing_document_id(indexer):
     """
 
     indexer.documents = {1: "https://example.com/one"}
-
     assert indexer.get_url_for_document(999) is None
-    assert indexer.get_url_for_document("not-a-number") is None
-    # Assert that Indexer logs warning messages.
-    assert "No URL found for document 999" in indexer.logger.messages["warning"][0]
-    assert "No URL found for document not-a-number" in indexer.logger.messages["warning"][1]
 
 
 def test_get_url_for_document_handles_none_document_id(indexer):

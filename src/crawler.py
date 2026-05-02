@@ -26,7 +26,7 @@ from bs4 import BeautifulSoup
 
 
 class Crawler:
-    def __init__(self, seeds, logger, politeness_window=6, crawl_limit=1000):
+    def __init__(self, seeds, logger, indexer=None, politeness_window=6, crawl_limit=1000):
         # The Frontier will be a Python dictionary of host dictionaries.
         # Each host will be of the following form {"queue": deque(), "lastAccessed": datetime}.
         # The queue of each host will list all URL's that need crawling on that host.
@@ -52,11 +52,13 @@ class Crawler:
         self.logger = logger
 
         # Indexer.
-        self.indexer = Indexer(logger=logger)
+        self.indexer = indexer or Indexer(logger=logger)
 
         # Add all seed URLs to the frontier.
         for seed in seeds:
             self.add_url_to_frontier(seed)
+
+    # ---------------------- Public Functions ----------------------
 
     def crawl(self):
         """ This function begins the crawling process. It continously scans the frontier for hosts that can be crawled, and 
@@ -120,6 +122,8 @@ class Crawler:
 
         # Save the index once the crawl is complete.
         self.indexer.save_index()
+
+    # --------------------- Private Functions ----------------------
 
     def download_web_page(self, host):
         """ This function takes a host dictionary from the frontier, and pops the first web page from the host's queue before
