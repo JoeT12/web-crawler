@@ -65,7 +65,7 @@ class FakeIndexer:
     def __init__(self, inverted_index=None, documents=None, urls=None, tokens=None):
         self.inverted_index = inverted_index or {}
         self.documents = documents if documents is not None else {
-            "1": {}, "2": {}, "3": {}, "4": {}}
+            1: {}, 2: {}, 3: {}, 4: {}}
         self.urls = urls or {}
         self.tokens = tokens
         self.requested_terms = []
@@ -121,55 +121,24 @@ def populated_indexer():
     return FakeIndexer(
         inverted_index={
             "alpha": {
-                "1": {"term_frequency": 1, "score": 0.0},
-                "2": {"term_frequency": 3, "score": 0.0},
-                "3": {"term_frequency": 1, "score": 0.0},
+                1: {"term_frequency": 1, "score": 0.0},
+                2: {"term_frequency": 3, "score": 0.0},
+                3: {"term_frequency": 1, "score": 0.0},
             },
             "beta": {
-                "1": {"term_frequency": 2, "score": 0.0},
-                "2": {"term_frequency": 1, "score": 0.0},
-                "4": {"term_frequency": 1, "score": 0.0},
+                1: {"term_frequency": 2, "score": 0.0},
+                2: {"term_frequency": 1, "score": 0.0},
+                4: {"term_frequency": 1, "score": 0.0},
             },
-            "gamma": {"3": {"term_frequency": 1, "score": 0.0}},
+            "gamma": {3: {"term_frequency": 1, "score": 0.0}},
         },
         urls={
-            "1": "https://example.com/one",
-            "2": "https://example.com/two",
-            "3": "https://example.com/three",
-            "4": "https://example.com/four",
+            1: "https://example.com/one",
+            2: "https://example.com/two",
+            3: "https://example.com/three",
+            4: "https://example.com/four",
         },
     )
-
-
-def test_constructor_loads_index_when_no_indexer_is_supplied(monkeypatch, logger):
-    """ Ensures that the constructor automatically loads the Indexer if no index is explicitly
-        supplied.
-
-        Args:
-            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
-                functions at runtime for mocking.
-            logger (logger): A mock logger object.
-    """
-
-    created = {}
-
-    class LoadingIndexer:
-        # Mock a loading indexer.
-        documents = {}
-
-        def __init__(self, received_logger):
-            created["logger"] = received_logger
-            created["loaded"] = False
-
-        def load_index(self):
-            created["loaded"] = True
-
-    monkeypatch.setattr("search.Indexer", LoadingIndexer)
-    searcher = Search(logger)
-
-    # Assert that the Search class has loaded its own indexer.
-    assert searcher.indexer.__class__ is LoadingIndexer
-    assert created == {"logger": logger, "loaded": True}
 
 
 def test_tokenise_query_returns_tokens_from_indexer(logger):
@@ -227,6 +196,94 @@ def test_tokenise_query_handles_indexer_errors(logger):
     assert logger.messages[-1][0] == "error"
 
 
+def test_constructor_uses_default_indexer_when_none_is_supplied(monkeypatch, logger):
+    """ Ensures that the Search constructor creates its own Indexer when one is not supplied.
+
+        Args:
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+            logger (logger): A mock logger object.
+    """
+
+    created = {}
+
+    class LoadingIndexer:
+        def __init__(self, received_logger):
+            created["logger"] = received_logger
+
+    monkeypatch.setattr("search.Indexer", LoadingIndexer)
+    searcher = Search(logger)
+
+    # Assert that the Search class created its own Indexer.
+    assert searcher.indexer.__class__ is LoadingIndexer
+    assert created == {"logger": logger}
+
+
+def test_search_term_returns_postings_for_valid_term(logger):
+    """ Ensures that the search_term function returns postings for a valid term.
+
+        Args:
+            logger (logger): A mock logger object.
+    """
+
+    indexer = FakeIndexer(
+        inverted_index={"alpha": {1: {"term_frequency": 1, "score": 0.0}}},
+        tokens=["alpha"],
+    )
+    searcher = Search(logger, indexer=indexer)
+
+    # Assert that the postings for the tokenised term were returned.
+    assert searcher.search_term("Alpha") == {
+        1: {"term_frequency": 1, "score": 0.0}
+    }
+
+
+@pytest.mark.parametrize("term", [None, ""])
+def test_search_term_rejects_missing_terms(term, logger):
+    """ Ensures that the search_term function rejects missing search terms.
+
+        Args:
+            term (str): The term to search for.
+            logger (logger): A mock logger object.
+    """
+
+    searcher = Search(logger, indexer=FakeIndexer())
+
+    # Assert that the function returned an empty dictionary and logged a warning.
+    assert searcher.search_term(term) == {}
+    assert logger.messages[-1][0] == "warning"
+
+
+def test_search_term_returns_empty_when_tokenisation_produces_no_tokens(logger):
+    """ Ensures that the search_term function returns an empty dictionary when term tokenisation
+        produces no tokens.
+
+        Args:
+            logger (logger): A mock logger object.
+    """
+
+    searcher = Search(logger, indexer=FakeIndexer(tokens=[]))
+
+    # Assert that the function returned an empty dictionary and logged a warning.
+    assert searcher.search_term("!!!") == {}
+    assert logger.messages[-1][0] == "warning"
+
+
+def test_search_term_returns_empty_when_no_postings_exist(logger):
+    """ Ensures that the search_term function returns an empty dictionary when no postings exist
+        for the tokenised term.
+
+        Args:
+            logger (logger): A mock logger object.
+    """
+
+    searcher = Search(logger, indexer=FakeIndexer(tokens=["missing"]))
+
+    # Assert that the function returned an empty dictionary and logged an info message.
+    assert searcher.search_term("missing") == {}
+    assert logger.messages[-1][0] == "info"
+
+
 def test_search_index_returns_documents_containing_all_unique_query_tokens(logger, populated_indexer):
     """ Ensures that the search_index function of the Search module returns documents containing all of the
         provided terms in the query. 
@@ -242,9 +299,9 @@ def test_search_index_returns_documents_containing_all_unique_query_tokens(logge
     results = searcher.search_index(["alpha", "beta", "alpha"])
 
     # Assert that all the expected documents have been returned.
-    assert list(results) == ["1", "2"]
-    assert set(results["1"]) == {"alpha", "beta"}
-    assert results["2"]["alpha"] == {"term_frequency": 3, "score": 0.0}
+    assert list(results) == [1, 2]
+    assert set(results[1]) == {"alpha", "beta"}
+    assert results[2]["alpha"] == {"term_frequency": 3, "score": 0.0}
     assert populated_indexer.requested_terms == ["alpha", "beta"]
 
 
@@ -333,18 +390,18 @@ def test_intersect_document_ids_finds_matches_and_uses_numeric_ordering(logger):
     # Mock Search module with mock indexer injected.
     searcher = Search(logger, indexer=FakeIndexer())
     # Mock document id lists to intersect.
-    left = [str(number) for number in range(0, 30, 2)]
-    right = [str(number) for number in range(0, 30, 4)]
+    left = [number for number in range(0, 30, 2)]
+    right = [number for number in range(0, 30, 4)]
 
     # Assert that the intersections returned are as expected.
     assert searcher.intersect_document_ids(
-        left, right) == ["0", "4", "8", "12", "16", "20", "24", "28"]
+        left, right) == [0, 4, 8, 12, 16, 20, 24, 28]
 
 
 @pytest.mark.parametrize(
     ("left", "right", "expected"),
-    [([], ["1"], []), (["1"], [], []),
-     (["a", "b"], ["b", "c"], ["b"]), (["1"], ["2"], [])],
+    [([], [1], []), ([1], [], []),
+     (["a", "b"], ["b", "c"], ["b"]), ([1], [2], [])],
 )
 def test_intersect_document_ids_handles_boundaries(left, right, expected, logger):
     """ Ensures that the intersect_document_ids function of the Search module correctly
@@ -364,45 +421,6 @@ def test_intersect_document_ids_handles_boundaries(left, right, expected, logger
     assert searcher.intersect_document_ids(left, right) == expected
 
 
-def test_intersect_document_ids_handles_comparison_errors(logger):
-    """ Ensures that the intersect_document_ids function of the Search module correctly
-        handles any errors that occur during comparison.
-
-        Args:
-            logger (logger): A mock logger object.
-    """
-
-    # Mock a Search module with our fake Indexer.
-    searcher = Search(logger, indexer=FakeIndexer())
-    # Mock an error for when getting sort key.
-    searcher.document_sort_key = lambda document_id: object()
-
-    # Assert that a list was returned and that an error message was output.
-    assert searcher.intersect_document_ids(["1"], ["2"]) == []
-    assert logger.messages[-1][0] == "error"
-
-
-@pytest.mark.parametrize(
-    ("document_id", "expected"),
-    [("10", 10), (7, 7), ("abc", "abc"), (None, "None")],
-)
-def test_document_sort_key_returns_numeric_keys_where_possible(document_id, expected, logger):
-    """ Ensures that the document_sort_key function of the Search module correctly
-        returns numeric keys when possible.
-
-    Args:
-        document_id (int/str): The document id to be converted to a sort key.
-        expected (int): The expected value of the sort key.
-        logger (logger): A mock logger object.
-    """
-
-    # Mock a Search module with our fake Indexer.
-    searcher = Search(logger, indexer=FakeIndexer())
-
-    # Assert that the sort key returned is as expected.
-    assert searcher.document_sort_key(document_id) == expected
-
-
 def test_score_document_uses_tfidf_and_topical_score(logger):
     """ Ensures that when scoring the documents, the Search module uses both TFIDF and
         topical score.
@@ -413,8 +431,8 @@ def test_score_document_uses_tfidf_and_topical_score(logger):
 
     # A mock Indexer initialised with a documents map and an inverted index.
     indexer = FakeIndexer(
-        documents={"1": {}, "2": {}, "3": {}},
-        inverted_index={"alpha": {"1": {}, "2": {}}, "beta": {"1": {}}},
+        documents={1: {}, 2: {}, 3: {}},
+        inverted_index={"alpha": {1: {}, 2: {}}, "beta": {1: {}}},
     )
     # A mock Search module injected with the mock indexer.
     searcher = Search(logger, indexer=indexer)
@@ -457,7 +475,7 @@ def test_score_document_defaults_missing_posting_fields_to_zero(logger):
     """
 
     # A mock Indexer initialised with a documents map and an inverted index.
-    indexer = FakeIndexer(documents={}, inverted_index={"alpha": {"1": {}}})
+    indexer = FakeIndexer(documents={}, inverted_index={"alpha": {1: {}}})
     # A mock Search module injected with the mock indexer.
     searcher = Search(logger, indexer=indexer)
 
@@ -475,7 +493,7 @@ def test_score_document_handles_indexer_errors(logger):
 
     class BrokenIndexer(FakeIndexer):
         # A broken mock indexer that throws an error when getting the inverted index.
-        documents = {"1": {}}
+        documents = {1: {}}
 
         def get_inverted_index(self, token):
             raise RuntimeError("df failed")
@@ -504,7 +522,7 @@ def test_search_ranks_matching_urls_and_respects_result_limit(logger, populated_
                       indexer=populated_indexer)
 
     # Assert that the documents returned are as expected, and that a message was logged for successful retrieval.
-    assert searcher.search("alpha beta") == [
+    assert searcher.search_query("alpha beta") == [
         "https://example.com/two", "https://example.com/one"]
     assert logger.messages[-1] == ("info", "Search returned 2 URLs")
 
@@ -521,7 +539,7 @@ def test_search_returns_empty_when_query_has_no_tokens(logger):
     searcher = Search(logger, indexer=FakeIndexer(tokens=[]))
 
     # Assert that the result was empty and that a warning message was logged.
-    assert searcher.search("!!!") == []
+    assert searcher.search_query("!!!") == []
     assert logger.messages[-1][0] == "warning"
 
 
@@ -539,7 +557,7 @@ def test_search_returns_empty_when_no_postings_match(logger, populated_indexer):
 
     # Assert that an empty list was returned and that an info message was logged to show no postings
     # were found.
-    assert searcher.search("alpha missing") == []
+    assert searcher.search_query("alpha missing") == []
     assert logger.messages[-1] == ("info", "No search results found")
 
 
@@ -552,18 +570,18 @@ def test_search_skips_zero_scores_and_missing_urls(logger):
     """
 
     # Mock postings and Search module.
-    postings = {"1": {"id": "1"}, "2": {"id": "2"}, "3": {"id": "3"}}
+    postings = {1: {"id": 1}, 2: {"id": 2}, 3: {"id": 3}}
     searcher = Search(logger, max_documents_returned=3, indexer=FakeIndexer(
-        urls={"3": "https://example.com/three"}))
+        urls={3: "https://example.com/three"}))
 
     # Mock return values for Search module functions.
     searcher.tokenise_query = lambda query: ["alpha"]
     searcher.search_index = lambda tokens: postings
     searcher.score_document = lambda tokens, posting: {
-        "1": 0.0, "2": 2.0, "3": 1.0}[posting["id"]]
+        1: 0.0, 2: 2.0, 3: 1.0}[posting["id"]]
 
     # Assert that only the expected URL was returned.
-    assert searcher.search("alpha") == ["https://example.com/three"]
+    assert searcher.search_query("alpha") == ["https://example.com/three"]
 
 
 def test_search_handles_unexpected_errors(logger):
@@ -582,5 +600,5 @@ def test_search_handles_unexpected_errors(logger):
 
     # Check that search simply returned an empty list (didn't crash); and that an
     # error message was logged in the console.
-    assert searcher.search("alpha") == []
+    assert searcher.search_query("alpha") == []
     assert logger.messages[-1][0] == "error"

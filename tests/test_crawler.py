@@ -92,7 +92,7 @@ def test_init_adds_each_seed_through_frontier(monkeypatch, logger):
 
     # Assert that the seeds were added to the test list.
     assert crawler.frontier == {}
-    assert crawler.crawled_urls == set()
+    assert crawler.seen_urls == set()
     assert crawler.disallowed_hosts == set()
     assert crawler.pages_crawled == 0
     assert added == ["https://a.test", "https://b.test"]
@@ -193,10 +193,10 @@ def test_add_url_adds_cleaned_url_to_existing_host(monkeypatch, crawler):
     # Call the function to add the URL to the frontier.
     crawler.add_url_to_frontier("https://example.com/path#section")
 
-    # Assert that the URL is added to the host queue and to the crawled_urls set.
+    # Assert that the URL is added to the host queue and to the seen_urls set.
     assert list(crawler.frontier["example.com"]["queue"]) == [
         "https://example.com/path"]
-    assert "https://example.com/path" in crawler.crawled_urls
+    assert "https://example.com/path" in crawler.seen_urls
 
 
 def test_add_url_rejects_empty_duplicate_invalid_and_disallowed(monkeypatch, crawler):
@@ -210,7 +210,7 @@ def test_add_url_rejects_empty_duplicate_invalid_and_disallowed(monkeypatch, cra
 
     # Set up the mocks.
     crawler.frontier["example.com"] = {"queue": deque(), "last_accessed": None}
-    crawler.crawled_urls.add("https://example.com/seen")
+    crawler.seen_urls.add("https://example.com/seen")
     crawler.disallowed_hosts.add("blocked.test")
     validate = Mock(side_effect=lambda value: value != "not a url")
     monkeypatch.setattr("crawler.validators.url", validate)
@@ -243,7 +243,7 @@ def test_add_url_adds_new_host_and_handles_host_rejection(monkeypatch, crawler):
 
     # Ensure that the host was not added to the crawled URLs.
     crawler.add_url_to_frontier("https://blocked.example/page")
-    assert "https://blocked.example/page" not in crawler.crawled_urls
+    assert "https://blocked.example/page" not in crawler.seen_urls
 
     # Setup mocks.
     def add_real_host(hostname):
@@ -255,7 +255,7 @@ def test_add_url_adds_new_host_and_handles_host_rejection(monkeypatch, crawler):
     crawler.add_url_to_frontier("https://new.example/page")
     assert list(crawler.frontier["new.example"]["queue"]) == [
         "https://new.example/page"]
-    assert "https://new.example/page" in crawler.crawled_urls
+    assert "https://new.example/page" in crawler.seen_urls
 
 
 def test_add_url_logs_unexpected_errors(monkeypatch, crawler):
@@ -373,7 +373,7 @@ def test_parse_web_page_adds_absolute_relative_and_fragment_links(monkeypatch, c
     # Mock the add_url_to_frontier function.
     def record(url):
         added.append(url)
-        crawler.crawled_urls.add(url)
+        crawler.seen_urls.add(url)
     monkeypatch.setattr(crawler, "add_url_to_frontier", record)
 
     # Mock an HTML response containing links.

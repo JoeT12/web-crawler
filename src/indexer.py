@@ -32,10 +32,12 @@ class Indexer:
         # A map of integers to URL's for the inverted index.
         self.documents = {}
 
-        #  NTLK dataset downloads required by Indexer.
+        # NTLK dataset downloads required by Indexer.
         nltk.download('stopwords')
         nltk.download('punkt')
         nltk.download('averaged_perceptron_tagger')
+
+    # ---------------------- Public Functions ----------------------
 
     def index_page(self, url, parsed_document):
         """ This function makes use of the helper functions: map_content_to_tag_families, tokenise_tag_content and build_postings to
@@ -53,10 +55,13 @@ class Indexer:
                 return
 
             # Assign the document an id, add the assigned document id and url to the map of documents.
-            existing_document_ids = [int(
-                document_id) for document_id, document_url in self.documents.items() if document_url == url]
+            existing_document_ids = [
+                document_id
+                for document_id, document_url in self.documents.items()
+                if document_url == url
+            ]
             document_id = existing_document_ids[0] if existing_document_ids else (
-                max([int(key) for key in self.documents.keys()], default=0) + 1)
+                max(self.documents.keys(), default=0) + 1)
             self.documents[document_id] = url
 
             # Get the postings of the document to add to the inverted index.
@@ -67,7 +72,7 @@ class Indexer:
 
             #  Add the postings to the (in memory) inverted index.
             for term, posting in postings.items():
-                self.index.setdefault(term, {})[str(document_id)] = posting
+                self.index.setdefault(term, {})[document_id] = posting
 
             self.logger.info(f"Indexed URL {url} as document {document_id}")
         except Exception as error:
@@ -103,77 +108,79 @@ class Indexer:
                 document_id (int): The numeric id of the document.
 
             Returns:
-                dict: The URL that corresponds to that document.
+                str: The URL that corresponds to that document.
         """
         try:
             if document_id is None:
                 self.logger.warning(
                     "Cannot get URL because document id is missing")
                 return None
-            url = self.documents.get(
-                document_id) or self.documents.get(str(document_id))
-            if not url:
-                try:
-                    url = self.documents.get(int(document_id))
-                except (TypeError, ValueError):
-                    url = None
-            if not url:
-                self.logger.warning(f"No URL found for document {document_id}")
-            return url
+            return self.documents.get(document_id)
         except Exception as error:
             self.logger.error(
                 f"Failed to get URL for document {document_id}: {error}")
             return None
 
-    def map_content_to_tag_families(self, parsed_document):
-        """ This function takes a document parsed with BeautifulSoup, and creates a map of the content corresponding to a particular tag
-            family in the document. For example, if the document has multiple headings, all such heading should be stored as a list under
-            the headings key of the map.
-
-            Args:
-                parsed_document (BeautifulSoup): The parsed web page.
-
-            Returns:
-                dict: A map of HTML tag families to document contents.
+    def save_index(self):
+        """ This function appends both the document map and inverted index map into the ../data directory as JSON files. It uses the json library 
+            to achieve this.
         """
-        tag_families = {"title": [], "headings": [],
-                        "body": [], "links": [], "metadata": []}
         try:
-            if parsed_document is None:
-                self.logger.warning(
-                    "Cannot map tag families because parsed document is missing")
-                return tag_families
+            # Ensure the data directory exists. If not, create.
+            data_directory = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), "..", "data"))
+            os.makedirs(data_directory, exist_ok=True)
 
-            if getattr(parsed_document, "title", None) and parsed_document.title.string:
-                tag_families["title"].append(
-                    parsed_document.title.string.strip())
+            # Append/write the (document-id:url) map to a file called documents.json.
+            with open(os.path.join(data_directory, "documents.json"), "w", encoding="utf-8") as documents_file:
+                json.dump(self.documents, documents_file,
+                          ensure_ascii=False, indent=2)
 
-            for tag in parsed_document.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
-                text = tag.get_text(" ", strip=True)
-                if text:
-                    tag_families["headings"].append(text)
+            # Append/write the inverted index in memory to a file called index.json.
+            with open(os.path.join(data_directory, "index.json"), "w", encoding="utf-8") as index_file:
+                json.dump(self.index, index_file, ensure_ascii=False, indent=2)
 
-            for tag in parsed_document.find_all("a"):
-                text = tag.get_text(" ", strip=True)
-                if text:
-                    tag_families["links"].append(text)
-
-            for tag in parsed_document.find_all("meta"):
-                content = tag.get("content")
-                if content:
-                    tag_families["metadata"].append(content.strip())
-
-            body = parsed_document.body if getattr(
-                parsed_document, "body", None) else parsed_document
-            text = body.get_text(" ", strip=True) if hasattr(
-                body, "get_text") else ""
-            if text:
-                tag_families["body"].append(text)
-
-            self.logger.info("Mapped parsed document content to tag families")
+            self.logger.info(
+                f"Saved index and document map to {data_directory}")
         except Exception as error:
-            self.logger.error(f"Failed to map tag families: {error}")
-        return tag_families
+            self.logger.error(f"Failed to save index: {error}")
+
+    def load_index(self):
+        """ This function loads both the document map and inverted index map from the ../data directory into the indexer class instance variables. It uses
+            the json library to achieve this.
+        """
+        try:
+            # Get the paths to the indexer files.
+            data_directory = os.path.abspath(os.path.join(
+                os.path.dirname(__file__), "..", "data"))
+            documents_path = os.path.join(data_directory, "documents.json")
+            index_path = os.path.join(data_directory, "index.json")
+
+            # If both files exist, then read them into memory.
+            # Otherwise, initalise the indexer field variables as empty python dictionaries.
+            if os.path.exists(documents_path):
+                with open(documents_path, "r", encoding="utf-8") as documents_file:
+                    self.documents = {
+                        int(doc_id): url for doc_id, url in json.load(documents_file).items()}
+            else:
+                self.documents = {}
+            if os.path.exists(index_path):
+                with open(index_path, "r", encoding="utf-8") as index_file:
+                    raw_index = json.load(index_file)
+                    self.index = {
+                        term: {int(doc_id): posting for doc_id,
+                               posting in postings.items()}
+                        for term, postings in raw_index.items()
+                    }
+            else:
+                self.index = {}
+
+            self.logger.info(
+                f"Loaded index and document map from {data_directory}")
+        except Exception as error:
+            self.logger.error(f"Failed to load index: {error}")
+            self.documents = {}
+            self.index = {}
 
     def tokenise_tag_content(self, tag_content):
         """ This function takes a list of content that was enclosed within a family of HTML tags for a particular document, and tokenises it into individual terms.
@@ -240,6 +247,58 @@ class Indexer:
             self.logger.error(f"Failed to tokenise tag content: {error}")
             return []
 
+    # --------------------- Private Functions ----------------------
+
+    def map_content_to_tag_families(self, parsed_document):
+        """ This function takes a document parsed with BeautifulSoup, and creates a map of the content corresponding to a particular tag
+            family in the document. For example, if the document has multiple headings, all such heading should be stored as a list under
+            the headings key of the map.
+
+            Args:
+                parsed_document (BeautifulSoup): The parsed web page.
+
+            Returns:
+                dict: A map of HTML tag families to document contents.
+        """
+        tag_families = {"title": [], "headings": [],
+                        "body": [], "links": [], "metadata": []}
+        try:
+            if parsed_document is None:
+                self.logger.warning(
+                    "Cannot map tag families because parsed document is missing")
+                return tag_families
+
+            if getattr(parsed_document, "title", None) and parsed_document.title.string:
+                tag_families["title"].append(
+                    parsed_document.title.string.strip())
+
+            for tag in parsed_document.find_all(["h1", "h2", "h3", "h4", "h5", "h6"]):
+                text = tag.get_text(" ", strip=True)
+                if text:
+                    tag_families["headings"].append(text)
+
+            for tag in parsed_document.find_all("a"):
+                text = tag.get_text(" ", strip=True)
+                if text:
+                    tag_families["links"].append(text)
+
+            for tag in parsed_document.find_all("meta"):
+                content = tag.get("content")
+                if content:
+                    tag_families["metadata"].append(content.strip())
+
+            body = parsed_document.body if getattr(
+                parsed_document, "body", None) else parsed_document
+            text = body.get_text(" ", strip=True) if hasattr(
+                body, "get_text") else ""
+            if text:
+                tag_families["body"].append(text)
+
+            self.logger.info("Mapped parsed document content to tag families")
+        except Exception as error:
+            self.logger.error(f"Failed to map tag families: {error}")
+        return tag_families
+
     def build_postings(self, document_tokens):
         """ This function should build the postings for the inverted index. Each posting includes:
             1. Term frequency;
@@ -282,58 +341,3 @@ class Indexer:
         except Exception as error:
             self.logger.error(f"Failed to build postings: {error}")
             return {}
-
-    def save_index(self):
-        """ This function appends both the document map and inverted index map into the ../data directory as JSON files. It uses the json library 
-            to achieve this.
-        """
-        try:
-            # Ensure the data directory exists. If not, create.
-            data_directory = os.path.abspath(os.path.join(
-                os.path.dirname(__file__), "..", "data"))
-            os.makedirs(data_directory, exist_ok=True)
-
-            # Append/write the (document-id:url) map to a file called documents.json.
-            with open(os.path.join(data_directory, "documents.json"), "w", encoding="utf-8") as documents_file:
-                json.dump(self.documents, documents_file,
-                          ensure_ascii=False, indent=2)
-
-            # Append/write the inverted index in memory to a file called index.json.
-            with open(os.path.join(data_directory, "index.json"), "w", encoding="utf-8") as index_file:
-                json.dump(self.index, index_file, ensure_ascii=False, indent=2)
-
-            self.logger.info(
-                f"Saved index and document map to {data_directory}")
-        except Exception as error:
-            self.logger.error(f"Failed to save index: {error}")
-
-    def load_index(self):
-        """ This function loads both the document map and inverted index map from the ../data directory into the indexer class instance variables. It uses
-            the json library to achieve this.
-        """
-        try:
-            # Get the paths to the indexer files.
-            data_directory = os.path.abspath(os.path.join(
-                os.path.dirname(__file__), "..", "data"))
-            documents_path = os.path.join(data_directory, "documents.json")
-            index_path = os.path.join(data_directory, "index.json")
-
-            # If both files exist, then read them into memory.
-            # Otherwise, initalise the indexer field variables as empty python dictionaries.
-            if os.path.exists(documents_path):
-                with open(documents_path, "r", encoding="utf-8") as documents_file:
-                    self.documents = json.load(documents_file)
-            else:
-                self.documents = {}
-            if os.path.exists(index_path):
-                with open(index_path, "r", encoding="utf-8") as index_file:
-                    self.index = json.load(index_file)
-            else:
-                self.index = {}
-
-            self.logger.info(
-                f"Loaded index and document map from {data_directory}")
-        except Exception as error:
-            self.logger.error(f"Failed to load index: {error}")
-            self.documents = {}
-            self.index = {}

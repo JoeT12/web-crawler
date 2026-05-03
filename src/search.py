@@ -29,10 +29,10 @@ class Search:
 
         # Indexer
         self.indexer = indexer or Indexer(logger)
-        if indexer is None:
-            self.indexer.load_index()
 
-    def search(self, query):
+    # ---------------------- Public Functions ----------------------
+
+    def search_query(self, query):
         """ This function takes a user search query, and returns a list of webpages that are most relevant for 
             that query. It utilises the following functions:
             1. tokenise_query: To tokenise the user query.
@@ -88,6 +88,40 @@ class Search:
         except Exception as error:
             self.logger.error(f"Failed to search for query {query}: {error}")
             return []
+
+    def search_term(self, term):
+        """ This function returns the inverted index postings for a single term.
+
+            Args:
+                term (str): The term to get the inverted index postings for.
+
+            Returns:
+                dict: The inverted index postings for a term.
+        """
+
+        # Check term has been passed correctly.
+        if term is None or len(term) == 0:
+            self.logger.warning(
+                f"No term provided to search_term function")
+            return {}
+
+        # Tokenise the term.
+        tokens = self.indexer.tokenise_tag_content([term])
+        if len(tokens) == 0:
+            self.logger.warning(
+                f"The term {term} provided had no tokens")
+            return {}
+
+        # Return the inverted index for the token.
+        postings = self.indexer.get_inverted_index(tokens[0])
+        if len(postings) == 0:
+            self.logger.info(
+                f"No entry in inverted index found for term {term}")
+            return {}
+        else:
+            return postings
+
+    # ---------------------- Private Functions ----------------------
 
     def tokenise_query(self, query):
         """ This function takes a user query for a search and creates a 1 element list with the query. It then 
@@ -145,13 +179,11 @@ class Search:
             # Sort the term indexes by their size.
             ordered_indexes = sorted(term_indexes, key=len)
             # Sort each index by document id.
-            matching_document_ids = sorted(
-                ordered_indexes[0].keys(), key=self.document_sort_key)
+            matching_document_ids = sorted(ordered_indexes[0].keys())
 
             # Reduce documents to those that only contain EVERY query term.
             for term_index in ordered_indexes[1:]:
-                other_document_ids = sorted(
-                    term_index.keys(), key=self.document_sort_key)
+                other_document_ids = sorted(term_index.keys())
                 matching_document_ids = self.intersect_document_ids(
                     matching_document_ids, other_document_ids)
                 if not matching_document_ids:
@@ -198,26 +230,22 @@ class Search:
                 left_id = left_document_ids[left_index]
                 right_id = right_document_ids[right_index]
 
-                # Convert document id's to comparable INT values.
-                left_key = self.document_sort_key(left_id)
-                right_key = self.document_sort_key(right_id)
-
-                if left_key == right_key:
+                if left_id == right_id:
                     # If we have a match, append id to the matches.
                     matches.append(left_id)
                     left_index += 1
                     right_index += 1
-                elif left_key < right_key:
+                elif left_id < right_id:
                     # Use skip pointer for the left list.
                     next_left_index = left_index + left_skip
-                    if next_left_index < len(left_document_ids) and self.document_sort_key(left_document_ids[next_left_index]) <= right_key:
+                    if next_left_index < len(left_document_ids) and left_document_ids[next_left_index] <= right_id:
                         left_index = next_left_index
                     else:
                         left_index += 1
                 else:
                     # Use skip pointer for the right list.
                     next_right_index = right_index + right_skip
-                    if next_right_index < len(right_document_ids) and self.document_sort_key(right_document_ids[next_right_index]) <= left_key:
+                    if next_right_index < len(right_document_ids) and right_document_ids[next_right_index] <= left_id:
                         right_index = next_right_index
                     else:
                         right_index += 1
@@ -228,23 +256,11 @@ class Search:
             self.logger.error(f"Failed to intersect document ids: {error}")
             return []
 
-    def document_sort_key(self, document_id):
-        """ This function returns the correct type for comparison/sort of document ids. 
-
-        Args:
-            document_id (int/str): The document id to convert format for.
-
-        Returns:
-            int/str: The int/string format of the document id.
-        """
-        try:
-            return int(document_id)
-        except (TypeError, ValueError):
-            return str(document_id)
-
     def score_document(self, tokenised_query, posting):
         """ This function takes a posting for a document and assigns it a score based on it's relevance for the given query. 
-            It uses the topical features of the document to create this score..
+            It uses the topical features of the document to create this score, alongisde TFIDF.
+
+            Reference: https://en.wikipedia.org/wiki/Tf%E2%80%93idf.
 
             Args:
                 tokenised_query (str): The tokenised search query to score documents against.
