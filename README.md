@@ -136,3 +136,8 @@ Please navigate to the [Running the Crawler](#running-the-crawler) section for i
 We acknowledge the use of AI to help develop the code in this project. To explain the use of AI in each file, we have written a very large comment at the top of all files where AI was employed, to explain its exact usage for full visibility.
 
 In this README.md file, AI was used to provide structure advice, provide code examples and clean up grammar/spelling/consistency mistakes.
+
+### AI Tools Used
+1. **ChatGPT 5.5 Thinking Model** was used for the Python and GitHub workflow code (see usage explanations within the files), and within this README for the purposes explained above.
+2. **GitHub Copilot** was also used in the `requirements.txt` and `.gitignore` files, but was disabled for all `.py` and `.yml` files.
+
