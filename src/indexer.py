@@ -55,10 +55,13 @@ class Indexer:
                 return
 
             # Assign the document an id, add the assigned document id and url to the map of documents.
-            existing_document_ids = [int(
-                document_id) for document_id, document_url in self.documents.items() if document_url == url]
+            existing_document_ids = [
+                document_id
+                for document_id, document_url in self.documents.items()
+                if document_url == url
+            ]
             document_id = existing_document_ids[0] if existing_document_ids else (
-                max([int(key) for key in self.documents.keys()], default=0) + 1)
+                max(self.documents.keys(), default=0) + 1)
             self.documents[document_id] = url
 
             # Get the postings of the document to add to the inverted index.
