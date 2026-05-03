@@ -258,7 +258,9 @@ class Search:
 
     def score_document(self, tokenised_query, posting):
         """ This function takes a posting for a document and assigns it a score based on it's relevance for the given query. 
-            It uses the topical features of the document to create this score..
+            It uses the topical features of the document to create this score, alongisde TFIDF.
+
+            Reference: https://en.wikipedia.org/wiki/Tf%E2%80%93idf.
 
             Args:
                 tokenised_query (str): The tokenised search query to score documents against.
