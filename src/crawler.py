@@ -133,7 +133,6 @@ class Crawler:
         self.logger.info(
             f"Total crawl time = {total_crawl_time:.2f} seconds")
 
-
         # Save the index once the crawl is complete.
         self.indexer.save_index()
 
