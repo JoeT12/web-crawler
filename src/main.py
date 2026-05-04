@@ -19,7 +19,7 @@ def main():
     # Module initalisations.
     indx = Indexer(logger=logger)
     crawler = Crawler(seeds=initial_seeds, logger=logger,
-                      crawl_limit=250, indexer=indx)
+                      crawl_limit=1500, indexer=indx)
     search = Search(logger=logger, indexer=indx)
 
     # Keep track of whether the index is loaded or not to prevent errors.
@@ -56,8 +56,11 @@ def main():
         # Perform a single term search when the print command is used.
         if cmd.startswith("print "):
             if loaded_index:
-                term = cmd[6:]
-                print(search.search_term(term))
+                term = cmd[6:].strip()
+                if len(term.split()) != 1:
+                    print("The print command accepts exactly one term")
+                else:
+                    print(search.search_term(term))
             else:
                 print(
                     "You must load the index before executing the print command")
