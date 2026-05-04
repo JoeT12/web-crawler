@@ -66,6 +66,9 @@ class Crawler:
             requests to the same host are spaced by the politeness_window; and that we don't crawl any more pages than the crawl_limit.
         """
 
+        # Record the start time of the crawl.
+        crawl_start_time = datetime.now()
+
         # Continue crawling while the number of pages crawled is below the crawl limit.
         while self.pages_crawled < self.crawl_limit:
             crawled_this_scan = False
@@ -119,6 +122,16 @@ class Crawler:
         # Log the total number of pages crawled during execution.
         self.logger.info(
             f"Crawl complete. Pages crawled: {self.pages_crawled}")
+
+        # Record the end time of the crawl.
+        crawl_end_time = datetime.now()
+
+        # Calculate the total time for the crawl and log it.
+        total_crawl_time = (crawl_end_time-crawl_start_time).total_seconds()
+
+        # Log the total crawling time
+        self.logger.info(
+            f"Total crawl time = {total_crawl_time:.2f} seconds")
 
         # Save the index once the crawl is complete.
         self.indexer.save_index()
