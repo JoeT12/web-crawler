@@ -8,19 +8,23 @@ import logging
 def main():
     initial_seeds = ["https://quotes.toscrape.com"]
 
-    # Logging Configuration.
+    # Debug logging Configuration.
+    # Debug logging disabled for demonstation purposes.
+    enable_logging = False
     logging.basicConfig(
         level=logging.INFO,
-        # Format of the logs to be printed out.
         format="%(levelname)s | %(name)s.%(funcName)s() | %(message)s",
     )
-    logger = logging.getLogger(__name__)
+    debug_logger = logging.getLogger(__name__)
+    # If the debug logging is not enabled, disable it.
+    if not enable_logging:
+        logging.disable(logging.CRITICAL)
 
     # Module initalisations.
-    indx = Indexer(logger=logger)
-    crawler = Crawler(seeds=initial_seeds, logger=logger,
-                      crawl_limit=1500, indexer=indx)
-    search = Search(logger=logger, indexer=indx)
+    indx = Indexer(logger=debug_logger)
+    crawler = Crawler(seeds=initial_seeds, logger=debug_logger,
+                      crawl_limit=5, indexer=indx)
+    search = Search(logger=debug_logger, indexer=indx)
 
     # Keep track of whether the index is loaded or not to prevent errors.
     loaded_index = False

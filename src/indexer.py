@@ -140,10 +140,9 @@ class Indexer:
             with open(os.path.join(data_directory, "index.json"), "w", encoding="utf-8") as index_file:
                 json.dump(self.index, index_file, ensure_ascii=False, indent=2)
 
-            self.logger.info(
-                f"Saved index and document map to {data_directory}")
+            print(f"Saved index and document map to {data_directory}")
         except Exception as error:
-            self.logger.error(f"Failed to save index: {error}")
+            print(f"Failed to save index: {error}")
 
     def load_index(self):
         """ This function loads both the document map and inverted index map from the ../data directory into the indexer class instance variables. It uses
@@ -175,10 +174,9 @@ class Indexer:
             else:
                 self.index = {}
 
-            self.logger.info(
-                f"Loaded index and document map from {data_directory}")
+            print(f"Loaded index and document map from {data_directory}")
         except Exception as error:
-            self.logger.error(f"Failed to load index: {error}")
+            print(f"Failed to load index: {error}")
             self.documents = {}
             self.index = {}
 

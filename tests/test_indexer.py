@@ -469,7 +469,7 @@ def test_load_index_uses_empty_dicts_when_files_do_not_exist(tmp_path, logger, m
     assert subject.index == {}
 
 
-def test_load_index_resets_state_when_json_is_invalid(tmp_path, logger, monkeypatch):
+def test_load_index_resets_state_when_json_is_invalid(tmp_path, logger, monkeypatch, capsys):
     """Ensure that the Indexer uses empty dictionaries and does not crash when the JSON within the
         data files is malformed.
 
@@ -496,14 +496,15 @@ def test_load_index_resets_state_when_json_is_invalid(tmp_path, logger, monkeypa
     subject.documents = {1: "stale"}
     subject.index = {"stale": {}}
 
-    # Assert that the malformed JSON was not loaded into the Indexer and that an error was logged.
+    # Assert that the malformed JSON was not loaded into the Indexer and that an error was printed.
     subject.load_index()
+    captured = capsys.readouterr()
     assert subject.documents == {}
     assert subject.index == {}
-    assert "Failed to load index" in logger.messages["error"][0]
+    assert "Failed to load index" in captured.out
 
 
-def test_save_index_logs_errors_without_raising(logger, monkeypatch):
+def test_save_index_logs_errors_without_raising(logger, monkeypatch, capsys):
     """Ensure that, when asked to save index data, the Indexer logs errors but does not raise them.
 
         Args:
@@ -517,9 +518,10 @@ def test_save_index_logs_errors_without_raising(logger, monkeypatch):
     monkeypatch.setattr(indexer_module.os, "makedirs", lambda *_args,
                         **_kwargs: (_ for _ in ()).throw(OSError("no permission")))
 
-    # Assert that errors were logged and that none were raised.
+    # Assert that errors were printed and that none were raised.
     subject.save_index()
-    assert "Failed to save index" in logger.messages["error"][0]
+    captured = capsys.readouterr()
+    assert "Failed to save index" in captured.out
 
 
 def test_get_inverted_index_returns_postings_for_existing_term(indexer):

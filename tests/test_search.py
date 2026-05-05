@@ -507,7 +507,7 @@ def test_score_document_handles_indexer_errors(logger):
     assert logger.messages[-1][0] == "error"
 
 
-def test_search_ranks_matching_urls_and_respects_result_limit(logger, populated_indexer):
+def test_search_ranks_matching_urls_and_respects_result_limit(logger, populated_indexer, capsys):
     """ Ensures that the search_index function of the Search module ranks the URLs via their
         TFIDF scoring and only returns the limit requested.
 
@@ -521,10 +521,11 @@ def test_search_ranks_matching_urls_and_respects_result_limit(logger, populated_
     searcher = Search(logger, max_documents_returned=2,
                       indexer=populated_indexer)
 
-    # Assert that the documents returned are as expected, and that a message was logged for successful retrieval.
+    # Assert that the documents returned are as expected, and that a message was printed for successful retrieval.
     assert searcher.search_query("alpha beta") == [
         "https://example.com/two", "https://example.com/one"]
-    assert logger.messages[-1] == ("info", "Search returned 2 URLs")
+    captured = capsys.readouterr()
+    assert "Search returned 2 URLs" in captured.out
 
 
 def test_search_returns_empty_when_query_has_no_tokens(logger):

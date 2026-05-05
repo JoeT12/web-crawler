@@ -83,7 +83,7 @@ class Search:
                 if url:
                     urls.append(url)
 
-            self.logger.info(f"Search returned {len(urls)} URLs")
+            print(f"Search returned {len(urls)} URLs")
             return urls
         except Exception as error:
             self.logger.error(f"Failed to search for query {query}: {error}")
