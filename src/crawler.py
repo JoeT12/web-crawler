@@ -120,8 +120,7 @@ class Crawler:
                 sleep(max(0.1, shortest_wait or 0.1))
 
         # Log the total number of pages crawled during execution.
-        self.logger.info(
-            f"Crawl complete. Pages crawled: {self.pages_crawled}")
+        print(f"Crawl complete. Pages crawled: {self.pages_crawled}")
 
         # Record the end time of the crawl.
         crawl_end_time = datetime.now()
@@ -130,8 +129,7 @@ class Crawler:
         total_crawl_time = (crawl_end_time-crawl_start_time).total_seconds()
 
         # Log the total crawling time
-        self.logger.info(
-            f"Total crawl time = {total_crawl_time:.2f} seconds")
+        print(f"Total crawl time = {total_crawl_time:.2f} seconds")
 
         # Save the index once the crawl is complete.
         self.indexer.save_index()
