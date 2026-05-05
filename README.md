@@ -116,7 +116,7 @@ The data structures chosen were as follows:
 6. **TFIDF Search Ranking**: Upon submission of a search query, the crawler will compare and rank the documents returned using the term-frequency inverse-document-frequency (TFIDF) formula. The TFIDF score of a document is combined with topical document features (which are stored within the index). Documents containing the query terms more prominently and more distinctively are ranked higher. Reference: [TFIDF]( https://en.wikipedia.org/wiki/Tf%E2%80%93idf).
 
 ## Testing
-The crawler has been supplemented with a high coverage (`>90%`) unit testing suite. Such tests can be found in the [tests](tests/) directory.
+The crawler has been supplemented with a high coverage (`>85%`) unit testing suite. Such tests can be found in the [tests](tests/) directory.
 
 To run the entire test suite and get a coverage percentage, simply run the command `pytest --cov=src --cov-report=term-missing tests/*.py` from the root directory of the application repository. Alternatively, a push of code to any branch of the GitHub repository also triggers an automatic run of the tests on GitHub.
 
