@@ -61,7 +61,10 @@ def main():
         if cmd.startswith("print "):
             if loaded_index:
                 term = cmd[6:].strip()
-                if len(term.split()) != 1:
+                num_terms = len(term.split())
+                if num_terms == 0:
+                    print("The print command must be provided with a term")
+                elif num_terms > 1:
                     print("The print command accepts exactly one term")
                 else:
                     print(search.search_term(term))
