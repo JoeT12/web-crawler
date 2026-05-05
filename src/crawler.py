@@ -1,3 +1,20 @@
+""" --------------------------- GEN AI USAGE DECLARATION ----------------------------
+    To implement the crawler functionality, we used the lecture slides to write function stubs and
+    detailed descriptions for implementation by a GenAI tool. The GenAI tool used to generate the
+    implementations was ChatGPT (5.2 Thinking model). We note that we have not changed the function
+    documentation comments throughout the development process to ensure full visibility as to the
+    information provided to the GenAI for implementation; and that the AI was instructucted to not
+    add any comments to the implementations, to enable us to perform this process and check over the AI generated code.
+
+    General guidance provided to the AI for all function implementation was as follows:
+    1. All code should be testable.
+    2. All code should handle errors gracefully to prevent crashes.
+    3. All code should be efficient, and concise as possible.
+    4. All code should use the logger to print helpful log messsages that can be used in any debugging.
+    5. Any added code should not be commented. (To allow for us to add comments ourselves).
+    ------------------------- GEN AI USAGE DECLARATION END --------------------------
+"""
+
 from collections import deque
 from datetime import datetime, timedelta
 from time import sleep
@@ -8,21 +25,6 @@ from indexer import Indexer
 import requests
 import validators
 from bs4 import BeautifulSoup
-
-# To implement the crawler functionality, we used the lecture slides to write function stubs and
-# detailed descriptions for implementation by a GenAI tool. The GenAI tool used to generate the
-# implementations was ChatGPT (5.2 Thinking model). We note that we have not changed the function
-# documentation comments throughout the development process to ensure full visibility as to the
-# information provided to the GenAI for implementation; and that the AI was instructucted to not
-# add any comments to the implementations, to enable us to perform this process and check over the AI generated code.
-
-
-# General guidance provided to the AI for all function implementation was as follows:
-# 1. All code should be testable.
-# 2. All code should handle errors gracefully to prevent crashes.
-# 3. All code should be efficient, and concise as possible.
-# 4. All code should use the logger to print helpful log messsages that can be used in any debugging.
-# 5. Any added code should not be commented. (To allow for us to add comments ourselves).
 
 
 class Crawler:

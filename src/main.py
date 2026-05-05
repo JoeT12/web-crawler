@@ -23,7 +23,7 @@ def main():
     # Module initalisations.
     indx = Indexer(logger=debug_logger)
     crawler = Crawler(seeds=initial_seeds, logger=debug_logger,
-                      crawl_limit=5, indexer=indx)
+                      crawl_limit=1750, indexer=indx)
     search = Search(logger=debug_logger, indexer=indx)
 
     # Keep track of whether the index is loaded or not to prevent errors.

@@ -114,6 +114,7 @@ The data structures chosen were as follows:
 4. **URL Optimisations**: The URLs are normalised to prevent treating fragments as separate pages, and a seen URLs set is kept to prevent the same URL from being added to the frontier twice.
 5. **Document-at-a-time Ranking**: The document-at-a-time approach is used to handle search queries, to minimise memory usage.
 6. **TFIDF Search Ranking**: Upon submission of a search query, the crawler will compare and rank the documents returned using the term-frequency inverse-document-frequency (TFIDF) formula. The TFIDF score of a document is combined with topical document features (which are stored within the index). Documents containing the query terms more prominently and more distinctively are ranked higher. Reference: [TFIDF]( https://en.wikipedia.org/wiki/Tf%E2%80%93idf).
+7. **PEP 8 Code Styling**: The PEP 8 code style was used to format code, promoting readability.
 
 ## Testing
 The crawler has been supplemented with a high coverage (`>85%`) unit testing suite. Such tests can be found in the [tests](tests/) directory.
@@ -132,10 +133,10 @@ The dependencies used are as follows:
 
 Please navigate to the [Running the Crawler](#running-the-crawler) section for information on how to install the dependencies and run the crawler.
 
-## AI Usage Acknowledgement
-We acknowledge the use of AI to help develop the code in this project. To explain the use of AI in each file, we have written a very large comment at the top of all files where AI was employed, to explain its exact usage for full visibility.
+## Generative AI Usage Acknowledgement/Declaration
+We acknowledge the use of AI to help develop the code in this project. To explain the full usage of AI in each file, we have written a declaration comment at the top of all the python files where GenAI was used, explaining its exact usage for full visibility.
 
-In this README.md file, AI was used to provide structure advice, provide code examples and clean up grammar/spelling/consistency mistakes.
+We also acknowledge the use of GenAI to provide structure advice, provide code examples and clean up grammar/spelling/consistency mistakes within this README.md file.
 
 ### AI Tools Used
 1. **ChatGPT 5.5 Thinking Model** was used for the Python and GitHub workflow code (see usage explanations within the files), and within this README for the purposes explained above.

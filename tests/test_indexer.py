@@ -1,28 +1,34 @@
+""" --------------------------- GEN AI USAGE DECLARATION ----------------------------
+    Disclaimer: All test code in this file was generated entirely by ChatGPT
+    (5.5 thinking model).
+
+    ChatGPT was given the context of the implemented indexer.py file, and given
+    the following prompt:
+    - "Imagine you are an experienced software developer that has been tasked
+       with implementing a web crawler for an upcoming search engine company.
+       The code for indexing has been provided and implemented by your team;
+       and now you have been tasked to write a high-coverage (>90%) test file
+       for the implementation. You have been given instructions by the team to
+       ensure all edge and boundary cases are covered, and that the tests are
+       written as concisely, efficiently and as readable as possible."
+
+    NOTE: To demonstrate our understanding of all the code written, we wrote
+    all comments and documentation comments ourselves. The GenAI did not create
+    any comments. We did, however, ask the GenAI to check and make changes for
+    ONLY spelling/grammar/styling mistakes.
+    ------------------------- GEN AI USAGE DECLARATION END --------------------------
+"""
+
 import importlib
 import json
 import re
 import sys
 from collections import defaultdict
 from pathlib import Path
-
 import pytest
 from bs4 import BeautifulSoup
 
-""" Disclaimer: All test code in this file was generated entirely by ChatGPT (5.5 thinking model).
-    
-    ChatGPT was given the context of the implemented indexer.py file, and given 
-    the following prompt
-    - "Imagine you are an experienced software developer that has been tasked with implementing a web crawler 
-       for an upcoming search engine company. The code for indexing has been provided and implemented by your team; 
-       and now you have been tasked to write a high-coverage (>90%) test file for the implementation. You have been 
-       given instructions by the team to ensure all edge and boundary cases are covered, and that the tests are 
-       written as concisely, efficiently and as readable as possible."
-
-    NOTE: To demonstrate our understanding of all the code written, we wrote all comments and documentation comments
-    ourselves. The GenAI did not create any comments. We did, however, ask the GenAI to check and make changes
-    for ONLY spelling/grammar/styling mistakes.
-"""
-
+# Since the crawler is not currently packaged, we need to resolve the Indexer from the parent directory.
 ROOT_DIR = Path(__file__).resolve().parents[1]
 SRC_DIR = ROOT_DIR / "src"
 if str(SRC_DIR) not in sys.path:
