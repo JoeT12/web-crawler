@@ -134,11 +134,31 @@ The dependencies used are as follows:
 Please navigate to the [Running the Crawler](#running-the-crawler) section for information on how to install the dependencies and run the crawler.
 
 ## Generative AI Usage Acknowledgement/Declaration
-We acknowledge the use of AI to help develop the code in this project. To explain the full usage of AI in each file, we have written a declaration comment at the top of all the python files where GenAI was used, explaining its exact usage for full visibility.
+We acknowledge the use of generative AI in the development of this project.
 
-We also acknowledge the use of GenAI to provide structure advice, provide code examples and clean up grammar/spelling/consistency mistakes within this README.md file.
+### Development Workflow With Generative AI
+Our development workflow with GenAI was as follows. We note that the Git commit history accurately depicts this.
+
+#### `src/` files
+Within the `src/` files, the workflow was as follows:
+1. We structured the class files, stubbed out functions, and created the core data structures.
+2. We then annotated the stubbed code with detailed comments and function descriptions.
+3. The commented, stubbed code was passed to a GenAI tool for implementation. The AI was instructed not to add any additional comments.
+4. We then reviewed the generated code and added our own detailed comments by hand to demonstrate our understanding of the implementation.
+
+The exception to this was `main.py`, which we wrote entirely by hand.
+
+#### `tests/` files
+Within the `tests/` files, the workflow was as follows:
+1. We passed the src implementation files to a GenAI tool and asked it to generate test files targeting high coverage.
+2. We then reviewed the generated tests and added detailed documentation comments and inline comments by hand to demonstrate our understanding of the test logic.
+
+#### `README.md`
+GenAI was also used to provide structural suggestions, example wording, and grammar, spelling, and consistency improvements within this `README.md` file.
+
+### GenAI Usage Declarations Within Code
+To provide full visibility of how GenAI was used in each file, we have included a usage declaration banner at the top of all Python files where GenAI contributed to the implementation.
 
 ### AI Tools Used
-1. **ChatGPT 5.5 Thinking Model** was used for the Python and GitHub workflow code (see usage explanations within the files), and within this README for the purposes explained above.
+1. **ChatGPT 5.5 Thinking Model** was used for the Python code, GitHub Actions workflow, test generation, and the README-related assistance described above.
 2. **GitHub Copilot** was also used in the `requirements.txt` and `.gitignore` files, but was disabled for all `.py` and `.yml` files.
-
