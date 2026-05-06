@@ -114,6 +114,7 @@ The data structures chosen were as follows:
 4. **URL Optimisations**: The URLs are normalised to prevent treating fragments as separate pages, and a seen URLs set is kept to prevent the same URL from being added to the frontier twice.
 5. **Document-at-a-time Ranking**: The document-at-a-time approach is used to handle search queries, to minimise memory usage.
 6. **TFIDF Search Ranking**: Upon submission of a search query, the crawler will compare and rank the documents returned using the term-frequency inverse-document-frequency (TFIDF) formula. The TFIDF score of a document is combined with topical document features (which are stored within the index). Documents containing the query terms more prominently and more distinctively are ranked higher. Reference: [TFIDF]( https://en.wikipedia.org/wiki/Tf%E2%80%93idf).
+7. **PEP 8 Code Styling**: The PEP 8 code style was used to format code, promoting readability.
 
 ## Testing
 The crawler has been supplemented with a high coverage (`>85%`) unit testing suite. Such tests can be found in the [tests](tests/) directory.
@@ -132,12 +133,32 @@ The dependencies used are as follows:
 
 Please navigate to the [Running the Crawler](#running-the-crawler) section for information on how to install the dependencies and run the crawler.
 
-## AI Usage Acknowledgement
-We acknowledge the use of AI to help develop the code in this project. To explain the use of AI in each file, we have written a very large comment at the top of all files where AI was employed, to explain its exact usage for full visibility.
+## Generative AI Usage Acknowledgement/Declaration
+We acknowledge the use of generative AI in the development of this project.
 
-In this README.md file, AI was used to provide structure advice, provide code examples and clean up grammar/spelling/consistency mistakes.
+### Development Workflow With Generative AI
+Our development workflow with GenAI was as follows. We note that the Git commit history accurately depicts this.
+
+#### `src/` files
+Within the `src/` files, the workflow was as follows:
+1. We structured the class files, stubbed out functions, and created the core data structures.
+2. We then annotated the stubbed code with detailed comments and function descriptions.
+3. The commented, stubbed code was passed to a GenAI tool for implementation. The AI was instructed not to add any additional comments.
+4. We then reviewed the generated code and added our own detailed comments by hand to demonstrate our understanding of the implementation.
+
+The exception to this was `main.py`, which we wrote entirely by hand.
+
+#### `tests/` files
+Within the `tests/` files, the workflow was as follows:
+1. We passed the src implementation files to a GenAI tool and asked it to generate test files targeting high coverage.
+2. We then reviewed the generated tests and added detailed documentation comments and inline comments by hand to demonstrate our understanding of the test logic.
+
+#### `README.md`
+GenAI was also used to provide structural suggestions, example wording, and grammar, spelling, and consistency improvements within this `README.md` file.
+
+### GenAI Usage Declarations Within Code
+To provide full visibility of how GenAI was used in each file, we have included a usage declaration banner at the top of all Python files where GenAI contributed to the implementation.
 
 ### AI Tools Used
-1. **ChatGPT 5.5 Thinking Model** was used for the Python and GitHub workflow code (see usage explanations within the files), and within this README for the purposes explained above.
+1. **ChatGPT 5.5 Thinking Model** was used for the Python code, GitHub Actions workflow, test generation, and the README-related assistance described above.
 2. **GitHub Copilot** was also used in the `requirements.txt` and `.gitignore` files, but was disabled for all `.py` and `.yml` files.
-

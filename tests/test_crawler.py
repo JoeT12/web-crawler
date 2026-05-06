@@ -1,22 +1,27 @@
-""" Disclaimer: All test code in this file was generated entirely by ChatGPT (5.5 thinking model).
-    
-    ChatGPT was given the context of the implemented crawler.py file, and given 
-    the following prompt
-    - "Imagine you are an experienced software developer that has been tasked with implementing a 
-       crawler for an upcoming search engine company. The crawler code provided has been implemented by your team; 
-       and now you have been tasked to write a high-coverage (>90%) test file for the implementation. 
-       You have been given instructions by the team to ensure all edge and boundary cases are covered, and that 
-       the tests are written as concisely, efficiently and as readable as possible."
+""" --------------------------- GEN AI USAGE DECLARATION ----------------------------
+    Disclaimer: All test code in this file was generated entirely by ChatGPT
+    (5.5 thinking model).
 
-    NOTE: To demonstrate our understanding of all the code written, we wrote all comments and documentation comments
-    ourselves. The GenAI did not create any comments. We did, however, ask the GenAI to check and make changes
-    for ONLY spelling/grammar/styling mistakes.
+    ChatGPT was given the context of the implemented crawler.py file, and given
+    the following prompt:
+    - "Imagine you are an experienced software developer that has been tasked
+       with implementing a crawler for an upcoming search engine company. The
+       crawler code provided has been implemented by your team; and now you
+       have been tasked to write a high-coverage (>90%) test file for the
+       implementation. You have been given instructions by the team to ensure
+       all edge and boundary cases are covered, and that the tests are written
+       as concisely, efficiently and as readable as possible."
+
+    NOTE: To demonstrate our understanding of all the code written, we wrote
+    all comments and documentation comments ourselves. The GenAI did not create
+    any comments. We did, however, ask the GenAI to check and make changes for
+    ONLY spelling/grammar/styling mistakes.
+    ------------------------- GEN AI USAGE DECLARATION END --------------------------
 """
 
 from collections import deque
 from datetime import datetime
 from unittest.mock import Mock
-
 import pytest
 import requests
 import sys

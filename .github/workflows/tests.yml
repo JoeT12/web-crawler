@@ -1,9 +1,14 @@
+# ------------------------- GEN AI USAGE DECLARATION --------------------------
 # This file was written entirely by ChatGPT (5.5 Thinking Model).
-# The prompt provided to the GenAI to generate this was as follows:
-#   "Imagine you are an experienced software developer that has been tasked with implementing a 
-#   web crawler for an upcoming search engine company. You have been given management permissions on the 
-#   repository, and you plan to use GitHub actions to automate your tests and output a coverage report on 
-#   each push and pull request. Write the GitHub actions file to achieve this."
+#
+# The prompt provided to the GenAI to generate this file was as follows:
+#   "Imagine you are an experienced software developer that has been tasked
+#   with implementing a web crawler for an upcoming search engine company.
+#   You have been given management permissions on the repository, and you
+#   plan to use GitHub Actions to automate your tests and output a coverage
+#   report on each push and pull request. Write the GitHub Actions file to
+#   achieve this."
+# ----------------------- GEN AI USAGE DECLARATION END ------------------------
 
 name: Formatting, Tests, Coverage
 
