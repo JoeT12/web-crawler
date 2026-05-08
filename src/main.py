@@ -9,8 +9,8 @@ def main():
     initial_seeds = ["https://quotes.toscrape.com"]
 
     # Debug logging Configuration.
-    # Debug logging disabled for demonstation purposes.
-    enable_logging = False
+    # Debug logging enabled for demonstration purposes.
+    enable_logging = True
     logging.basicConfig(
         level=logging.INFO,
         format="%(levelname)s | %(name)s.%(funcName)s() | %(message)s",
@@ -23,7 +23,7 @@ def main():
     # Module initalisations.
     indx = Indexer(logger=debug_logger)
     crawler = Crawler(seeds=initial_seeds, logger=debug_logger,
-                      crawl_limit=150, indexer=indx)
+                      crawl_limit=None, indexer=indx, single_host=True)
     search = Search(logger=debug_logger, indexer=indx)
 
     # Keep track of whether the index is loaded or not to prevent errors.

@@ -16,7 +16,7 @@ Once the repository has been cloned, navigate to the repository on your local ma
 Once the application has been set up and invoked, you should see a `>>` displayed in the terminal. This means the program is ready for you to input your command.
 
 ## Commands / Usage
-1. `build`: The build command will begin the web crawling process, with the seed URLs specified in [main.py](src/main.py). It will crawl a fixed number of pages, which can also be adjusted in the same file. Example usage is just the command with no additional arguments: `build`.
+1. `build`: The build command will begin the web crawling process, with the seed URLs specified in [main.py](src/main.py). Example usage is just the command with no additional arguments: `build`.
 2. `load`: The load command will load the inverted index and the document map stored on disk into the application memory, to allow search. Example usage is just the command with no additional arguments: `load`.
 3. `print`: The print command will take a single argument: a single term and return the inverted index posting for that term (if it exists). Example usage: `print hello`.
 4. `find`: The find command will take a search query as an argument, and return all pages that are relevant to the query. Example usage: `find quotes`.
@@ -115,6 +115,7 @@ The data structures chosen were as follows:
 5. **Document-at-a-time Ranking**: The document-at-a-time approach is used to handle search queries, to minimise memory usage.
 6. **TFIDF Search Ranking**: Upon submission of a search query, the crawler will compare and rank the documents returned using the term-frequency inverse-document-frequency (TFIDF) formula. The TFIDF score of a document is combined with topical document features (which are stored within the index). Documents containing the query terms more prominently and more distinctively are ranked higher. Reference: [TFIDF]( https://en.wikipedia.org/wiki/Tf%E2%80%93idf).
 7. **PEP 8 Code Styling**: The PEP 8 code style was used to format code, promoting readability.
+8. **Extensibility**: The crawler has a constructor variable called `single_host`. When set to `True`, the crawler remains within the seed host set; otherwise, it may follow links across hosts. For this coursework, it is set to `True` to keep crawling within the coursework target host set, however in the future it could be set to `False` to enable crawling across hosts.
 
 ## Testing
 The crawler has been supplemented with a high coverage (`>85%`) unit testing suite. Such tests can be found in the [tests](tests/) directory.
