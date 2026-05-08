@@ -265,7 +265,7 @@ class Crawler:
                 self.logger.info(f"Host not added to frontier: {hostname}")
                 return
 
-            # Ensure that the URL we are using is allowed for our crawler by the robots.txt.
+            # Ensure that the URL we are using is allowed for our crawler by the robots.txt.
             robots_parser = self.robots_parsers.get(hostname)
             if robots_parser is not None and not robots_parser.can_fetch("COMP3011Crawler/1.0", cleaned_url):
                 self.logger.info(
