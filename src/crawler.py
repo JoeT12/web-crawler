@@ -28,7 +28,7 @@ from bs4 import BeautifulSoup
 
 
 class Crawler:
-    def __init__(self, seeds, logger, indexer=None, politeness_window=6, crawl_limit=1000):
+    def __init__(self, seeds, logger, indexer=None, politeness_window=6, crawl_limit=None, single_host=False):
         # The Frontier will be a Python dictionary of host dictionaries.
         # Each host will be of the following form {"queue": deque(), "lastAccessed": datetime}.
         # The queue of each host will list all URL's that need crawling on that host.
@@ -42,9 +42,18 @@ class Crawler:
         # Maintain a set of hosts disallowed by robots.txt to avoid repeated robots.txt checks.
         self.disallowed_hosts = set()
 
+        # Cache parsed robots.txt rules per host so discovered URLs can be checked efficiently.
+        self.robots_parsers = {}
+
+        # In single-host mode, store the seed hosts that crawled URLs must remain within.
+        self.allowed_hosts = {
+            parsed.hostname for parsed in (urlparse(seed) for seed in seeds) if parsed.hostname
+        } if single_host else set()
+
         # The politeness window enforces a delay between requests to the same host.
         self.politeness_window = politeness_window
         self.crawl_limit = crawl_limit
+        self.single_host = single_host
         self.request_timeout = 10
 
         # Keep track of the number of pages (successfully crawled).
@@ -72,7 +81,7 @@ class Crawler:
         crawl_start_time = datetime.now()
 
         # Continue crawling while the number of pages crawled is below the crawl limit.
-        while self.pages_crawled < self.crawl_limit:
+        while self.crawl_limit is None or self.pages_crawled < self.crawl_limit:
             crawled_this_scan = False
             shortest_wait = None
 
@@ -80,7 +89,7 @@ class Crawler:
             for hostname, host in list(self.frontier.items()):
 
                 # Check that the crawl limit has not been exceeded.
-                if self.pages_crawled >= self.crawl_limit:
+                if self.crawl_limit is not None and self.pages_crawled >= self.crawl_limit:
                     break
 
                 # Ensure that the host has a queue.
@@ -241,6 +250,12 @@ class Crawler:
                     f"Invalid URL not added to frontier: {url}")
                 return
 
+            # In single-host mode, reject discovered URLs that leave the seed host set.
+            if self.allowed_hosts and hostname not in self.allowed_hosts:
+                self.logger.info(
+                    f"Out-of-scope URL not added to frontier: {cleaned_url}")
+                return
+
             # Check whether the host has already been marked as disallowed.
             if hostname in self.disallowed_hosts:
                 return
@@ -248,6 +263,13 @@ class Crawler:
             # Attempt to add the host to the frontier.
             if hostname not in self.frontier and not self.add_host_to_frontier(hostname):
                 self.logger.info(f"Host not added to frontier: {hostname}")
+                return
+
+            # Ensure that the URL we are using is allowed for our crawler by the robots.txt.
+            robots_parser = self.robots_parsers.get(hostname)
+            if robots_parser is not None and not robots_parser.can_fetch("COMP3011Crawler/1.0", cleaned_url):
+                self.logger.info(
+                    f"URL disallowed by robots.txt and not added to frontier: {cleaned_url}")
                 return
 
             self.frontier[hostname]["queue"].append(cleaned_url)
@@ -285,13 +307,16 @@ class Crawler:
                 robots_parser.set_url(robots_url)
                 robots_parser.parse(robots_response.text.splitlines())
 
-                # Check that this crawler is allowed to fetch the web page.
+                # Check that this crawler is allowed to fetch from the host.
                 if not robots_parser.can_fetch("COMP3011Crawler/1.0", f"https://{hostname}/"):
                     # If not, cache the host as disallowed to avoid refetching robots.txt.
                     self.disallowed_hosts.add(hostname)
                     self.logger.info(
                         f"Crawling disallowed by robots.txt for host: {hostname}")
                     return False
+
+                # Cache robots.txt file so can be reused when crawling the same host.
+                self.robots_parsers[hostname] = robots_parser
             except requests.RequestException as error:
                 self.logger.warning(
                     f"Could not read robots.txt for {hostname}; allowing host: {error}")

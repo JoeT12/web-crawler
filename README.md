@@ -115,6 +115,7 @@ The data structures chosen were as follows:
 5. **Document-at-a-time Ranking**: The document-at-a-time approach is used to handle search queries, to minimise memory usage.
 6. **TFIDF Search Ranking**: Upon submission of a search query, the crawler will compare and rank the documents returned using the term-frequency inverse-document-frequency (TFIDF) formula. The TFIDF score of a document is combined with topical document features (which are stored within the index). Documents containing the query terms more prominently and more distinctively are ranked higher. Reference: [TFIDF]( https://en.wikipedia.org/wiki/Tf%E2%80%93idf).
 7. **PEP 8 Code Styling**: The PEP 8 code style was used to format code, promoting readability.
+8. **Extensibility**: The crawler has a constructor variable called `single_host`. When set to `True`, the crawler remains within the seed host set; otherwise, it may follow links across hosts. For this coursework, it is set to `True` to ensure termination of the crawler, however in the future it could be set to false to enable unlimited crawling across the entire web.
 
 ## Testing
 The crawler has been supplemented with a high coverage (`>85%`) unit testing suite. Such tests can be found in the [tests](tests/) directory.

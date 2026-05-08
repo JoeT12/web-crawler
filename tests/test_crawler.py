@@ -99,8 +99,27 @@ def test_init_adds_each_seed_through_frontier(monkeypatch, logger):
     assert crawler.frontier == {}
     assert crawler.seen_urls == set()
     assert crawler.disallowed_hosts == set()
+    assert crawler.allowed_hosts == set()
+    assert crawler.single_host is False
     assert crawler.pages_crawled == 0
     assert added == ["https://a.test", "https://b.test"]
+
+
+def test_init_sets_allowed_hosts_in_single_host_mode(monkeypatch, logger):
+    """Ensure that single_host mode restricts crawling to the seed hosts.
+
+        Args:
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+            logger (logger): A mock logger object.
+    """
+
+    monkeypatch.setattr(Crawler, "add_url_to_frontier", lambda self, url: None)
+
+    crawler = Crawler(["https://a.test", "https://b.test"], logger, single_host=True)
+
+    assert crawler.allowed_hosts == {"a.test", "b.test"}
+    assert crawler.single_host is True
 
 
 def test_add_host_allows_when_robots_allows(monkeypatch, crawler):
@@ -230,6 +249,70 @@ def test_add_url_rejects_empty_duplicate_invalid_and_disallowed(monkeypatch, cra
     assert list(crawler.frontier["example.com"]["queue"]) == []
     crawler.logger.warning.assert_any_call(
         "Invalid URL not added to frontier: not a url")
+
+
+def test_add_url_rejects_out_of_scope_host(monkeypatch, crawler):
+    """Ensure that the crawler only queues URLs on the seed host.
+
+        Args:
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+            crawler (Crawler): The instantiated Crawler object.
+    """
+
+    crawler.allowed_hosts = {"example.com"}
+    monkeypatch.setattr("crawler.validators.url", Mock(return_value=True))
+
+    crawler.add_url_to_frontier("https://other.example/page")
+
+    assert "other.example" not in crawler.frontier
+    assert "https://other.example/page" not in crawler.seen_urls
+
+
+def test_add_url_rejects_url_blocked_by_robots(monkeypatch, crawler):
+    """Ensure that the crawler checks robots.txt against the concrete URL being queued.
+
+        Args:
+            monkeypatch (pytest.monkeyPatch.MonkeyPatch): A MonkeyPatch object used to modify
+                functions at runtime for mocking.
+            crawler (Crawler): The instantiated Crawler object.
+    """
+
+    crawler.frontier["example.com"] = {"queue": deque(), "last_accessed": None}
+    crawler.allowed_hosts = {"example.com"}
+    monkeypatch.setattr("crawler.validators.url", Mock(return_value=True))
+
+    class FakeRobotsParser:
+        def can_fetch(self, _agent, url):
+            return not url.endswith("/blocked")
+
+    crawler.robots_parsers["example.com"] = FakeRobotsParser()
+
+    crawler.add_url_to_frontier("https://example.com/blocked")
+
+    assert list(crawler.frontier["example.com"]["queue"]) == []
+    assert "https://example.com/blocked" not in crawler.seen_urls
+
+
+def test_parse_web_page_follows_links_when_present(logger):
+    """Ensure that parsing a page still follows discovered links.
+
+        Args:
+            logger (logger): A mock logger object.
+    """
+
+    indexer = Mock()
+    crawler = Crawler([], logger, indexer=indexer)
+    crawler.add_url_to_frontier = Mock()
+    response = FakeResponse(
+        url="https://example.com/",
+        text='<html><body><a href="/next">Next</a><p>Body</p></body></html>',
+    )
+
+    crawler.parse_web_page(response)
+
+    crawler.add_url_to_frontier.assert_called_once_with("https://example.com/next")
+    indexer.index_page.assert_called_once()
 
 
 def test_add_url_adds_new_host_and_handles_host_rejection(monkeypatch, crawler):
